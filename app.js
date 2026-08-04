@@ -1940,3 +1940,226 @@ showWordSlots?.addEventListener("change", setWordSlotVisibility);
 expandAllHypotheses?.addEventListener("click", () => renderedHypothesisSegments.filter((element) => !element.hidden).forEach((element) => element.open = true));
 collapseAllHypotheses?.addEventListener("click", () => renderedHypothesisSegments.forEach((element) => element.open = false));
 if (hypothesisSegmentsContainer) loadHypothesisPackage();
+
+// visual-refresh-v1
+function initializeVisualRefresh() {
+    if (document.body.classList.contains("visual-refresh")) return;
+    document.body.classList.add("visual-refresh");
+    document.body.id ||= "page-top";
+
+    const hero = document.querySelector(".hero");
+    const heroContainer = hero?.querySelector(".container");
+
+    if (heroContainer && !heroContainer.querySelector(".hero-actions")) {
+        const actions = document.createElement("div");
+        actions.className = "hero-actions";
+
+        [
+            ["#full-recording", "Open waveform laboratory", true],
+            ["#machine-hypotheses", "Review machine hypotheses", false],
+            ["#background-speech-sweep", "Inspect background sweep", false]
+        ].forEach(([href, label, primary]) => {
+            if (!document.querySelector(href)) return;
+            const link = document.createElement("a");
+            link.className = `hero-action${primary ? " primary" : ""}`;
+            link.href = href;
+            link.textContent = label;
+            actions.append(link);
+        });
+
+        const metrics = document.createElement("div");
+        metrics.className = "hero-metrics";
+        [
+            ["9:45 source", "Complete circulated recording"],
+            ["2 channels", "Independently routable"],
+            ["Raw-first", "Conventional, non-generative DSP"],
+            ["Disclosed output", "Models, settings, hashes, alternatives"]
+        ].forEach(([title, description]) => {
+            const card = document.createElement("div");
+            card.className = "hero-metric";
+            const strong = document.createElement("strong");
+            const span = document.createElement("span");
+            strong.textContent = title;
+            span.textContent = description;
+            card.append(strong, span);
+            metrics.append(card);
+        });
+        heroContainer.append(actions, metrics);
+    }
+
+    const main = document.querySelector("main");
+    const sections = main
+        ? Array.from(main.querySelectorAll(":scope > section.section"))
+        : [];
+
+    sections.forEach((section, index) => {
+        if (section.id) return;
+        const text = section.querySelector("h2")?.textContent || `section-${index + 1}`;
+        section.id = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+    });
+
+    const labelFor = (section) => {
+        const text = section.querySelector("h2")?.textContent?.trim() || "Section";
+        const rules = [
+            [/waveform laboratory/i, "Listen"],
+            [/candidate a/i, "Candidate A"],
+            [/candidate c/i, "Candidate C"],
+            [/machine-generated phonetic/i, "Machine hypotheses"],
+            [/background-speech sweep/i, "Background sweep"],
+            [/summary/i, "Summary"],
+            [/finding/i, "Findings"],
+            [/method/i, "Method"],
+            [/source/i, "Source"],
+            [/limitation/i, "Limits"]
+        ];
+        return rules.find(([pattern]) => pattern.test(text))?.[1] || (text.length > 21 ? `${text.slice(0, 20)}…` : text);
+    };
+
+    if (hero && !document.querySelector(".site-section-nav")) {
+        const nav = document.createElement("nav");
+        nav.className = "site-section-nav";
+        const inner = document.createElement("div");
+        inner.className = "container site-section-nav-inner";
+        const brand = document.createElement("span");
+        brand.className = "site-nav-brand";
+        brand.textContent = "Audio review";
+        inner.append(brand);
+
+        const preferred = ["Listen", "Summary", "Candidate A", "Candidate C", "Findings", "Machine hypotheses", "Background sweep", "Method"];
+        const selected = sections.filter((section) => preferred.includes(labelFor(section)));
+        (selected.length >= 3 ? selected : sections.slice(0, 8)).forEach((section) => {
+            const link = document.createElement("a");
+            link.className = "site-nav-link";
+            link.href = `#${section.id}`;
+            link.dataset.sectionId = section.id;
+            link.textContent = labelFor(section);
+            link.addEventListener("click", () => {
+                if (section.classList.contains("is-collapsed")) {
+                    section.querySelector(".section-collapse-button")?.click();
+                }
+            });
+            inner.append(link);
+        });
+
+        const spacer = document.createElement("span");
+        spacer.className = "site-nav-spacer";
+        const expand = document.createElement("button");
+        const compact = document.createElement("button");
+        expand.className = compact.className = "site-nav-control";
+        expand.type = compact.type = "button";
+        expand.textContent = "Expand sections";
+        compact.textContent = "Compact view";
+        expand.addEventListener("click", () => document.querySelectorAll(".compactable-section.is-collapsed .section-collapse-button").forEach((button) => button.click()));
+        compact.addEventListener("click", () => document.querySelectorAll(".compactable-section:not(.is-collapsed)").forEach((section) => section.querySelector(".section-collapse-button")?.click()));
+        inner.append(spacer, expand, compact);
+        nav.append(inner);
+        hero.insertAdjacentElement("afterend", nav);
+    }
+
+    const startsOpen = (section) => {
+        if (section.id === "full-recording") return true;
+        return /summary|overall finding|key finding/i.test(section.querySelector("h2")?.textContent || "");
+    };
+
+    sections.forEach((section) => {
+        if (section.id === "full-recording" || section.classList.contains("compactable-section")) return;
+        let heading = section.querySelector(":scope > .section-heading");
+        if (!heading) {
+            const h2 = Array.from(section.children).find((child) => child.tagName === "H2");
+            if (!h2) return;
+            heading = document.createElement("div");
+            heading.className = "compact-section-heading";
+            section.insertBefore(heading, h2);
+            heading.append(h2);
+        }
+
+        const body = document.createElement("div");
+        body.className = "section-body";
+        Array.from(section.children).filter((child) => child !== heading).forEach((child) => body.append(child));
+        section.append(body);
+        section.classList.add("compactable-section");
+
+        const button = document.createElement("button");
+        button.className = "section-collapse-button";
+        button.type = "button";
+        const setOpen = (open) => {
+            section.classList.toggle("is-collapsed", !open);
+            body.hidden = !open;
+            button.textContent = open ? "Collapse" : "Open";
+            button.setAttribute("aria-expanded", String(open));
+        };
+        button.addEventListener("click", () => setOpen(section.classList.contains("is-collapsed")));
+        heading.append(button);
+        setOpen(startsOpen(section));
+    });
+
+    const lab = document.getElementById("full-recording");
+    if (lab && !lab.querySelector(".lab-workspace")) {
+        const workspace = document.createElement("div");
+        workspace.className = "lab-workspace";
+        const tabs = document.createElement("div");
+        tabs.className = "lab-tab-list";
+        tabs.setAttribute("role", "tablist");
+        const panels = [];
+
+        [
+            ["listen", "Listen & select", "lab-listen-grid", [".channel-legend", ".channel-panel", ".wave-shell", ".transport", ".selection-panel", ".zoom-panel", ".bookmarks"]],
+            ["enhance", "Enhance & compare", "lab-enhance-grid", [".spectrum-panel", ".processing-panel"]],
+            ["measure", "Measure & export", "lab-measure-grid", [".selection-analysis-panel"]],
+            ["source", "Source & fallback", "lab-measure-grid", [".fallback-player"]]
+        ].forEach(([id, label, className, selectors], index) => {
+            const panel = document.createElement("div");
+            panel.className = `lab-tab-panel ${className}`;
+            panel.id = `lab-panel-${id}`;
+            panel.hidden = index !== 0;
+            selectors.forEach((selector) => {
+                const element = lab.querySelector(selector);
+                if (element && !workspace.contains(element)) panel.append(element);
+            });
+            if (!panel.children.length) return;
+            const button = document.createElement("button");
+            button.className = `lab-tab-button${index === 0 ? " active" : ""}`;
+            button.type = "button";
+            button.textContent = label;
+            button.addEventListener("click", () => {
+                tabs.querySelectorAll(".lab-tab-button").forEach((item) => item.classList.remove("active"));
+                panels.forEach((item) => item.hidden = true);
+                button.classList.add("active");
+                panel.hidden = false;
+            });
+            tabs.append(button);
+            panels.push(panel);
+        });
+        workspace.append(tabs, ...panels);
+        (lab.querySelector(".lab-intro") || lab.querySelector(".section-heading")).insertAdjacentElement("afterend", workspace);
+    }
+
+    const links = Array.from(document.querySelectorAll(".site-nav-link[data-section-id]"));
+    if ("IntersectionObserver" in window && links.length) {
+        const byId = new Map(links.map((link) => [link.dataset.sectionId, link]));
+        const observer = new IntersectionObserver((entries) => {
+            const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+            if (!visible) return;
+            links.forEach((link) => link.classList.toggle("active", link === byId.get(visible.target.id)));
+        }, { rootMargin: "-18% 0px -68% 0px", threshold: [.05, .2, .5] });
+        sections.forEach((section) => observer.observe(section));
+    }
+
+    if (!document.querySelector(".back-to-top")) {
+        const top = document.createElement("a");
+        top.className = "back-to-top";
+        top.href = "#page-top";
+        top.textContent = "↑";
+        top.setAttribute("aria-label", "Back to top");
+        document.body.append(top);
+        const update = () => top.classList.toggle("visible", window.scrollY > 800);
+        window.addEventListener("scroll", update, { passive: true });
+        update();
+    }
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializeVisualRefresh, { once: true });
+} else {
+    initializeVisualRefresh();
+}
