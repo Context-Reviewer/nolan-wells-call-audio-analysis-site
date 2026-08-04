@@ -1,131 +1,963 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="A reproducible, non-generative review of the publicly circulated Nolan Wells Sea Tow call.">
-  <title>Nolan Wells Sea Tow Call Audio Analysis</title>
-  <link rel="stylesheet" href="./styles.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+        name="description"
+        content="A reproducible, non-generative examination of the publicly circulated Nolan Wells Sea Tow call."
+    >
+    <title>Nolan Wells Sea Tow Call Audio Analysis</title>
+    <link rel="stylesheet" href="./styles.css">
 </head>
+
 <body>
 <header class="hero">
-  <div class="wrap">
-    <p class="eyebrow">Independent audio review</p>
-    <h1>Nolan Wells Sea Tow Call</h1>
-    <p class="lead">What the circulated recording supports, what remains ambiguous, and how captions can shape what listeners believe they hear.</p>
-    <div class="warning">Not a certified forensic report. The working source is a YouTube-derived copy, not the native MDMR file.</div>
-  </div>
+    <div class="container">
+        <p class="eyebrow">Independent audio review</p>
+        <h1>Nolan Wells Sea Tow Call</h1>
+        <p class="lead">
+            The complete publicly circulated recording, interactive channel
+            waveforms, selected passages, and a distinction between what the
+            audio supports and what remains ambiguous.
+        </p>
+        <div class="notice">
+            This is not a certified forensic report. The working source was
+            downloaded from YouTube and is not represented as the native MDMR
+            file.
+        </div>
+    </div>
 </header>
 
-<main class="wrap">
-<section>
-  <h2>Summary</h2>
-  <div class="grid three">
-    <article class="card"><span class="tag high">High confidence</span><h3>Independent channels</h3><p>The recording is not duplicated stereo. Its two channels contain substantially different audio.</p></article>
-    <article class="card"><span class="tag high">High confidence</span><h3>Hold music separation</h3><p>Most opening hold music is concentrated on one channel while nearby microphone activity appears on the other.</p></article>
-    <article class="card"><span class="tag no">Not supported</span><h3>No confirmed “Nolan”</h3><p>No examined passage contains a stable, independently recognizable utterance of the name “Nolan.”</p></article>
-  </div>
+<main>
+<section class="container section full-recording" id="full-recording">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Complete source recording</p>
+            <h2>Waveform laboratory</h2>
+        </div>
+        <span class="status high">9:45 complete recording</span>
+    </div>
+
+    <p class="lab-intro">
+        This is the complete YouTube-derived recording used in the analysis.
+        Click to seek. Drag across either waveform to create a selection.
+        Drag the highlighted selection to move it, or drag its edges to resize
+        it. A selection can be played once, looped, or enlarged with
+        <strong>Zoom to selection</strong>.
+    </p>
+
+    <div class="channel-legend" aria-label="Channel legend">
+        <span><i class="channel-one"></i>Channel 1 — hold music/call side</span>
+        <span><i class="channel-two"></i>Channel 2 — nearby microphone side</span>
+    </div>
+    <section class="forensic-panel channel-panel" aria-labelledby="channel-panel-title">
+        <div class="forensic-panel-heading">
+            <div>
+                <p class="eyebrow">Signal routing</p>
+                <h3 id="channel-panel-title">Channel isolation</h3>
+            </div>
+            <output id="signal-path-status" class="processing-state">
+                Original stereo
+            </output>
+        </div>
+
+        <p class="panel-description">
+            Channel 2 contains the nearby microphone activity examined in this
+            project. Isolating it sends that channel equally to both ears
+            without attempting to invent or reconstruct missing sound.
+        </p>
+
+        <div class="control-grid channel-control-grid">
+            <label>
+                Listening mode
+                <select id="channel-mode" disabled>
+                    <option value="stereo" selected>Original stereo</option>
+                    <option value="channel1">Channel 1 only — centered</option>
+                    <option value="channel2">Channel 2 only — centered</option>
+                    <option value="mono">Mono sum — L + R</option>
+                    <option value="difference">Difference — L − R</option>
+                    <option value="reverse-difference">Difference — R − L</option>
+                </select>
+            </label>
+
+            <label>
+                Channel 1 gain
+                <span class="range-row">
+                    <input
+                        id="channel-1-gain"
+                        type="range"
+                        min="-60"
+                        max="18"
+                        step="0.5"
+                        value="0"
+                        disabled
+                    >
+                    <output id="channel-1-gain-value">0.0 dB</output>
+                </span>
+            </label>
+
+            <label>
+                Channel 2 gain
+                <span class="range-row">
+                    <input
+                        id="channel-2-gain"
+                        type="range"
+                        min="-60"
+                        max="18"
+                        step="0.5"
+                        value="0"
+                        disabled
+                    >
+                    <output id="channel-2-gain-value">0.0 dB</output>
+                </span>
+            </label>
+
+            <label>
+                Master gain
+                <span class="range-row">
+                    <input
+                        id="master-gain"
+                        type="range"
+                        min="-24"
+                        max="18"
+                        step="0.5"
+                        value="0"
+                        disabled
+                    >
+                    <output id="master-gain-value">0.0 dB</output>
+                </span>
+            </label>
+        </div>
+
+        <div class="button-row">
+            <button id="focus-channel-2" type="button" disabled>
+                Focus Channel 2
+            </button>
+            <button id="restore-stereo" type="button" disabled>
+                Restore original stereo
+            </button>
+            <button id="swap-channels" type="button" disabled>
+                Swap channels
+            </button>
+        </div>
+
+        <div class="warning-strip">
+            Difference modes can suppress material shared by both channels,
+            but may also exaggerate codec and phase artifacts. They are
+            diagnostic views, not stronger evidence.
+        </div>
+    </section>
+
+    <div class="wave-shell">
+        <div id="waveform-status" class="wave-status">Loading complete recording…</div>
+        <div id="waveform" aria-label="Interactive full-recording waveform"></div>
+        <div id="timeline"></div>
+    </div>
+
+    
+    <section class="forensic-panel spectrum-panel" aria-labelledby="spectrum-title">
+        <div class="forensic-panel-heading">
+            <div>
+                <p class="eyebrow">Processed output</p>
+                <h3 id="spectrum-title">Live frequency analyzer</h3>
+            </div>
+
+            <label class="inline-control">
+                Display ceiling
+                <select id="spectrum-max-frequency" disabled>
+                    <option value="4000">4 kHz</option>
+                    <option value="8000" selected>8 kHz</option>
+                    <option value="12000">12 kHz</option>
+                    <option value="20000">20 kHz</option>
+                </select>
+            </label>
+        </div>
+
+        <canvas
+            id="spectrum-canvas"
+            width="1000"
+            height="240"
+            aria-label="Live frequency magnitude display"
+        ></canvas>
+
+        <p class="muted compact-note">
+            This analyzer displays the signal after the selected channel
+            routing and filters. It is a listening aid, not a phonetic
+            classifier.
+        </p>
+    </section>
+
+    <div class="transport" aria-label="Playback controls">
+        <button id="play-pause" type="button" disabled>Play</button>
+        <button id="stop" type="button" disabled>Stop</button>
+        <button id="back-five" type="button" disabled>−5 sec</button>
+        <button id="forward-five" type="button" disabled>+5 sec</button>
+
+        <label class="compact-field">
+            Speed
+            <select id="playback-rate" disabled>
+                <option value="0.5">0.5×</option>
+                <option value="0.75">0.75×</option>
+                <option value="1" selected>1×</option>
+                <option value="1.25">1.25×</option>
+                <option value="1.5">1.5×</option>
+                <option value="2">2×</option>
+            </select>
+        </label>
+
+        <output id="current-time">00:00.00 / 00:00.00</output>
+    </div>
+
+    <div class="selection-panel">
+        <div class="selection-heading">
+            <div>
+                <h3>Selected passage</h3>
+                <p>
+                    Enter exact boundaries in seconds, or drag directly on the
+                    waveform.
+                </p>
+            </div>
+            <output id="selection-duration">No selection</output>
+        </div>
+
+        <div class="selection-controls">
+            <label>
+                Start (seconds)
+                <input
+                    id="selection-start"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value="0.08"
+                    disabled
+                >
+            </label>
+
+            <label>
+                End (seconds)
+                <input
+                    id="selection-end"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value="1.62"
+                    disabled
+                >
+            </label>
+
+            <button id="apply-selection" type="button" disabled>
+                Apply boundaries
+            </button>
+            <button id="play-selection" type="button" disabled>
+                Play selection
+            </button>
+
+            <label class="loop-control">
+                <input id="loop-selection" type="checkbox" disabled>
+                Loop selection
+            </label>
+
+            <button id="clear-selection" type="button" disabled>
+                Clear
+            </button>
+        </div>
+    </div>
+
+    
+    <details class="forensic-panel processing-panel" open>
+        <summary>
+            <span>
+                <strong>Forensic listening controls</strong>
+                <small>All filters begin bypassed</small>
+            </span>
+            <output id="filter-status" class="processing-state">
+                Filters bypassed
+            </output>
+        </summary>
+
+        <div class="processing-content">
+            <div class="control-grid">
+                <label>
+                    Preset
+                    <select id="filter-preset" disabled>
+                        <option value="bypass" selected>Bypass — original signal</option>
+                        <option value="speech-mild">Mild speech focus</option>
+                        <option value="speech-narrow">Narrow speech focus</option>
+                        <option value="rumble">Rumble reduction</option>
+                        <option value="telephone">Telephone band</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </label>
+
+                <label class="checkbox-control">
+                    <input id="preserve-pitch" type="checkbox" checked disabled>
+                    Preserve pitch when slowing playback
+                </label>
+
+                <label class="checkbox-control">
+                    <input id="bypass-filters" type="checkbox" checked disabled>
+                    A/B bypass all filters
+                </label>
+
+                <label class="checkbox-control">
+                    <input id="compressor-enabled" type="checkbox" disabled>
+                    Gentle dynamics compression
+                </label>
+            </div>
+
+            <div class="filter-grid">
+                <fieldset>
+                    <legend>
+                        <label class="checkbox-control">
+                            <input id="highpass-enabled" type="checkbox" disabled>
+                            High-pass
+                        </label>
+                    </legend>
+
+                    <label>
+                        Cutoff
+                        <span class="range-row">
+                            <input
+                                id="highpass-frequency"
+                                type="range"
+                                min="20"
+                                max="1000"
+                                step="5"
+                                value="100"
+                                disabled
+                            >
+                            <output id="highpass-value">100 Hz</output>
+                        </span>
+                    </label>
+                </fieldset>
+
+                <fieldset>
+                    <legend>
+                        <label class="checkbox-control">
+                            <input id="lowpass-enabled" type="checkbox" disabled>
+                            Low-pass
+                        </label>
+                    </legend>
+
+                    <label>
+                        Cutoff
+                        <span class="range-row">
+                            <input
+                                id="lowpass-frequency"
+                                type="range"
+                                min="1000"
+                                max="20000"
+                                step="50"
+                                value="6000"
+                                disabled
+                            >
+                            <output id="lowpass-value">6000 Hz</output>
+                        </span>
+                    </label>
+                </fieldset>
+
+                <fieldset>
+                    <legend>
+                        <label class="checkbox-control">
+                            <input id="notch-enabled" type="checkbox" disabled>
+                            Notch
+                        </label>
+                    </legend>
+
+                    <label>
+                        Center frequency
+                        <span class="range-row">
+                            <input
+                                id="notch-frequency"
+                                type="range"
+                                min="40"
+                                max="10000"
+                                step="10"
+                                value="1000"
+                                disabled
+                            >
+                            <output id="notch-frequency-value">1000 Hz</output>
+                        </span>
+                    </label>
+
+                    <label>
+                        Q / width
+                        <span class="range-row">
+                            <input
+                                id="notch-q"
+                                type="range"
+                                min="0.5"
+                                max="30"
+                                step="0.5"
+                                value="8"
+                                disabled
+                            >
+                            <output id="notch-q-value">8.0</output>
+                        </span>
+                    </label>
+                </fieldset>
+
+                <fieldset>
+                    <legend>
+                        <label class="checkbox-control">
+                            <input id="peak-enabled" type="checkbox" disabled>
+                            Presence emphasis
+                        </label>
+                    </legend>
+
+                    <label>
+                        Center frequency
+                        <span class="range-row">
+                            <input
+                                id="peak-frequency"
+                                type="range"
+                                min="200"
+                                max="8000"
+                                step="25"
+                                value="2500"
+                                disabled
+                            >
+                            <output id="peak-frequency-value">2500 Hz</output>
+                        </span>
+                    </label>
+
+                    <label>
+                        Gain
+                        <span class="range-row">
+                            <input
+                                id="peak-gain"
+                                type="range"
+                                min="-12"
+                                max="12"
+                                step="0.5"
+                                value="4"
+                                disabled
+                            >
+                            <output id="peak-gain-value">+4.0 dB</output>
+                        </span>
+                    </label>
+
+                    <label>
+                        Q / width
+                        <span class="range-row">
+                            <input
+                                id="peak-q"
+                                type="range"
+                                min="0.3"
+                                max="10"
+                                step="0.1"
+                                value="1.2"
+                                disabled
+                            >
+                            <output id="peak-q-value">1.2</output>
+                        </span>
+                    </label>
+                </fieldset>
+            </div>
+
+            <div class="button-row">
+                <button id="reset-processing" type="button" disabled>
+                    Reset all processing
+                </button>
+            </div>
+
+            <div class="warning-strip">
+                Filtering can make weak material easier to inspect, but it
+                cannot restore discarded information. Extreme settings may
+                create or emphasize speech-like artifacts. Always compare
+                against the bypassed source.
+            </div>
+        </div>
+    </details>
+
+    <div class="zoom-panel">
+        <label for="zoom-level">
+            Horizontal zoom
+            <input
+                id="zoom-level"
+                type="range"
+                min="1"
+                max="300"
+                value="1"
+                step="1"
+                disabled
+            >
+        </label>
+        <output id="zoom-value">1 px/sec</output>
+        <button id="zoom-selection" type="button" disabled>
+            Zoom to selection
+        </button>
+        <button id="reset-zoom" type="button" disabled>
+            Reset zoom
+        </button>
+    </div>
+
+    
+    <section
+        class="forensic-panel selection-analysis-panel"
+        aria-labelledby="selection-analysis-title"
+    >
+        <div class="forensic-panel-heading">
+            <div>
+                <p class="eyebrow">Measured from decoded samples</p>
+                <h3 id="selection-analysis-title">Selection analysis</h3>
+            </div>
+            <output id="analysis-status" class="processing-state">
+                Waiting for selection
+            </output>
+        </div>
+
+        <div class="table-wrap">
+            <table id="selection-statistics">
+                <thead>
+                    <tr>
+                        <th>Channel</th>
+                        <th>Peak</th>
+                        <th>RMS</th>
+                        <th>Crest factor</th>
+                        <th>DC offset</th>
+                        <th>Zero crossings</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th>Channel 1</th>
+                        <td id="stat-c1-peak">—</td>
+                        <td id="stat-c1-rms">—</td>
+                        <td id="stat-c1-crest">—</td>
+                        <td id="stat-c1-dc">—</td>
+                        <td id="stat-c1-zc">—</td>
+                    </tr>
+                    <tr>
+                        <th>Channel 2</th>
+                        <td id="stat-c2-peak">—</td>
+                        <td id="stat-c2-rms">—</td>
+                        <td id="stat-c2-crest">—</td>
+                        <td id="stat-c2-dc">—</td>
+                        <td id="stat-c2-zc">—</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <p class="muted compact-note">
+            Long selections are sampled at a regular interval to keep the page
+            responsive. Values describe signal level and shape; they do not
+            determine what words were spoken.
+        </p>
+
+        <div class="export-grid">
+            <label>
+                WAV export mix
+                <select id="export-mode" disabled>
+                    <option value="current" selected>Current channel mode</option>
+                    <option value="stereo">Original stereo</option>
+                    <option value="channel1">Channel 1 mono</option>
+                    <option value="channel2">Channel 2 mono</option>
+                    <option value="mono">Mono sum</option>
+                    <option value="difference">L − R difference</option>
+                    <option value="reverse-difference">R − L difference</option>
+                </select>
+            </label>
+
+            <button id="export-selection-wav" type="button" disabled>
+                Export selection as WAV
+            </button>
+
+            <button id="download-analysis-report" type="button" disabled>
+                Download analysis report
+            </button>
+
+            <button id="copy-selection-link" type="button" disabled>
+                Copy shareable interval link
+            </button>
+        </div>
+
+        <output id="export-status" class="hash-output">
+            WAV exports contain the selected raw channel mix before filters.
+        </output>
+    </section>
+
+    <div class="bookmarks" aria-label="Analysis bookmarks">
+        <span>Analysis bookmarks:</span>
+        <button
+            type="button"
+            class="bookmark"
+            data-start="0.08"
+            data-end="1.62"
+            disabled
+        >
+            Candidate A · 0.08–1.62
+        </button>
+        <button
+            type="button"
+            class="bookmark"
+            data-start="12.55"
+            data-end="15.05"
+            disabled
+        >
+            Candidate C · 12.55–15.05
+        </button>
+    </div>
+
+    <details class="fallback-player">
+        <summary>Standard player and source download</summary>
+        <audio controls preload="metadata">
+            <source src="./assets/audio/full-recording.mp3" type="audio/mpeg">
+        </audio>
+        <p>
+            <a href="./assets/audio/full-recording.mp3" download>
+                Download browser MP3
+            </a>
+            ·
+            <a href="./assets/audio/full-recording-source.webm" download>
+                Download preserved YouTube WebM source
+            </a>
+        </p>
+    </details>
+
+    <p class="muted technical-note">
+        The waveform uses a constant-bitrate stereo MP3 generated from the
+        preserved YouTube audio stream. Both channels remain separate.
+    </p>
 </section>
 
-<section>
-  <h2>Source path</h2>
-  <div class="chain">
-    <span>Claimed MDMR CXone release</span><b>→</b><span>YouTube upload</span><b>→</b><span>Opus stream</span><b>→</b><span>Lossless working copy</span><b>→</b><span>Channel separation</span>
-  </div>
-  <p class="muted">The first step is based on the uploader’s provenance claim. This project has not independently obtained the native MDMR file.</p>
+<section class="container section">
+    <h2>Summary</h2>
+    <div class="cards">
+        <article class="card">
+            <span class="status high">High confidence</span>
+            <h3>Two independent channels</h3>
+            <p>
+                The recording is not duplicated stereo. Its two channels
+                contain substantially different audio.
+            </p>
+        </article>
+
+        <article class="card">
+            <span class="status high">High confidence</span>
+            <h3>Hold music can be separated</h3>
+            <p>
+                During the opening, most hold music is concentrated on one
+                channel while nearby microphone activity appears on the other.
+            </p>
+        </article>
+
+        <article class="card">
+            <span class="status unsupported">Not supported</span>
+            <h3>No confirmed “Nolan”</h3>
+            <p>
+                No examined passage contains a stable and independently
+                recognizable utterance of the name “Nolan.”
+            </p>
+        </article>
+    </div>
 </section>
 
-<section>
-  <div class="heading"><div><p class="eyebrow">Listen before reading</p><h2>Candidate A</h2></div><span class="tag maybe">Probable, not certain</span></div>
-  <p>Listen first, then reveal the interpretation.</p>
-  <div class="grid three">
-    <article class="card"><h3>Raw isolated channel</h3><audio controls preload="metadata" src="./assets/audio/candidate-a-raw.wav"></audio></article>
-    <article class="card"><h3>Conservative cleanup</h3><audio controls preload="metadata" src="./assets/audio/candidate-a-conservative.wav"></audio></article>
-    <article class="card diagnostic"><h3>Consonant-focused diagnostic</h3><audio controls preload="metadata" src="./assets/audio/candidate-a-consonant.wav"></audio><p class="muted">Diagnostic aid only; not stronger evidence than the conservative version.</p></article>
-  </div>
-  <button data-target="a-text">Reveal current interpretation</button>
-  <div class="reveal" id="a-text" hidden><strong>Current best interpretation:</strong> “Shut the fuck up.”<p>The wording is plausible across multiple versions, but the source quality does not justify certainty.</p></div>
+<section class="container section">
+    <h2>Source path</h2>
+
+    <div class="source-chain">
+        <div>Claimed MDMR CXone release</div>
+        <span>→</span>
+        <div>YouTube upload</div>
+        <span>→</span>
+        <div>Highest-quality available Opus stream</div>
+        <span>→</span>
+        <div>Lossless analysis copy</div>
+        <span>→</span>
+        <div>Channel separation and filtering</div>
+    </div>
+
+    <p class="muted">
+        The first step is based on the uploader’s provenance claim. This
+        project has not independently obtained the native MDMR file.
+    </p>
 </section>
 
-<section>
-  <div class="heading"><div><p class="eyebrow">Listen before reading</p><h2>Candidate C</h2></div><span class="tag maybe">Moderate support</span></div>
-  <div class="grid three">
-    <article class="card"><h3>Raw isolated channel</h3><audio controls preload="metadata" src="./assets/audio/candidate-c-raw.wav"></audio></article>
-    <article class="card"><h3>Conservative cleanup</h3><audio controls preload="metadata" src="./assets/audio/candidate-c-conservative.wav"></audio></article>
-    <article class="card diagnostic"><h3>Vowel/formant diagnostic</h3><audio controls preload="metadata" src="./assets/audio/candidate-c-formant.wav"></audio><p class="muted">Emphasizes vowel and formant structure.</p></article>
-  </div>
-  <button data-target="c-text">Reveal current interpretation</button>
-  <div class="reveal" id="c-text" hidden><strong>Current best interpretation:</strong> “Oh my God,” followed by a possible “what did we do?” or “what do we do?”<p>“Oh my God” is more stable. The trailing words remain ambiguous.</p></div>
+<section class="container section" id="candidate-a">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Listen before reading</p>
+            <h2>Candidate A</h2>
+        </div>
+        <span class="status moderate">Probable, not certain</span>
+    </div>
+
+    <p>
+        Listen to the raw recording first. Do not reveal the interpretation
+        until after forming your own impression.
+    </p>
+
+    <button
+        class="open-full-selection"
+        type="button"
+        data-start="0.08"
+        data-end="1.62"
+    >
+        Open this interval in the full recording
+    </button>
+
+    <div class="audio-grid">
+        <article class="audio-card">
+            <h3>Raw isolated channel</h3>
+            <audio controls preload="metadata">
+                <source src="./assets/audio/candidate-a-raw.wav" type="audio/wav">
+            </audio>
+        </article>
+
+        <article class="audio-card">
+            <h3>Conservative cleanup</h3>
+            <audio controls preload="metadata">
+                <source
+                    src="./assets/audio/candidate-a-conservative.wav"
+                    type="audio/wav"
+                >
+            </audio>
+        </article>
+
+        <article class="audio-card diagnostic">
+            <h3>Consonant-focused diagnostic</h3>
+            <audio controls preload="metadata">
+                <source
+                    src="./assets/audio/candidate-a-consonant.wav"
+                    type="audio/wav"
+                >
+            </audio>
+            <p>
+                This version emphasizes consonant energy and should not be
+                treated as stronger evidence than the conservative version.
+            </p>
+        </article>
+    </div>
+
+    <button class="reveal-button" type="button" data-target="transcript-a">
+        Reveal current interpretation
+    </button>
+
+    <div class="transcript" id="transcript-a" hidden>
+        <strong>Current best interpretation:</strong>
+        “Shut the fuck up.”
+        <p>
+            The wording remains plausible across multiple versions, but the
+            source quality does not justify calling it certain.
+        </p>
+    </div>
 </section>
 
-<section>
-  <h2>What about “Nolan”?</h2>
-  <div class="card finding">
-    <h3>We could not confirm a stable utterance of the name.</h3>
-    <p>This does not prove the name was never spoken. It means this YouTube-derived recording does not support confidently transcribing it in the examined passages.</p>
-  </div>
+<section class="container section" id="candidate-c">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Listen before reading</p>
+            <h2>Candidate C</h2>
+        </div>
+        <span class="status moderate">Moderate support</span>
+    </div>
+
+    <button
+        class="open-full-selection"
+        type="button"
+        data-start="12.55"
+        data-end="15.05"
+    >
+        Open this interval in the full recording
+    </button>
+
+    <div class="audio-grid">
+        <article class="audio-card">
+            <h3>Raw isolated channel</h3>
+            <audio controls preload="metadata">
+                <source src="./assets/audio/candidate-c-raw.wav" type="audio/wav">
+            </audio>
+        </article>
+
+        <article class="audio-card">
+            <h3>Conservative cleanup</h3>
+            <audio controls preload="metadata">
+                <source
+                    src="./assets/audio/candidate-c-conservative.wav"
+                    type="audio/wav"
+                >
+            </audio>
+        </article>
+
+        <article class="audio-card diagnostic">
+            <h3>Vowel/formant-focused diagnostic</h3>
+            <audio controls preload="metadata">
+                <source
+                    src="./assets/audio/candidate-c-formant.wav"
+                    type="audio/wav"
+                >
+            </audio>
+            <p>This version emphasizes vowel and formant structure.</p>
+        </article>
+    </div>
+
+    <button class="reveal-button" type="button" data-target="transcript-c">
+        Reveal current interpretation
+    </button>
+
+    <div class="transcript" id="transcript-c" hidden>
+        <strong>Current best interpretation:</strong>
+        “Oh my God,” followed by a possible “what did we do?” or
+        “what do we do?”
+        <p>
+            “Oh my God” is the more stable portion. The trailing words remain
+            ambiguous, particularly the distinction between “did” and “do.”
+        </p>
+    </div>
 </section>
 
-<section>
-  <h2>Why captions matter</h2>
-  <div class="grid two">
-    <article class="card"><h3>Ambiguous audio</h3><p>Compression, distance, and noise suppression can erase or distort phonetic detail.</p></article>
-    <article class="card"><h3>Caption-induced priming</h3><p>When words appear before listening, the brain may fit ambiguous sound to the suggested phrase. Once formed, the interpretation can become difficult to unhear.</p></article>
-  </div>
+<section class="container section">
+    <h2>What about the name “Nolan”?</h2>
+
+    <div class="finding-block">
+        <p class="large-finding">
+            We could not confirm a stable utterance of “Nolan.”
+        </p>
+        <p>
+            The name has a recognizable two-syllable structure. That structure
+            did not remain consistently identifiable in the raw isolated
+            channel or the conservative cleanup.
+        </p>
+        <p>
+            This does not prove that the name was never spoken. It means this
+            YouTube-derived recording does not support confidently transcribing
+            it in the examined passages.
+        </p>
+    </div>
 </section>
 
-<section>
-  <h2>Findings by confidence</h2>
-  <table>
-    <tr><th>Finding</th><th>Assessment</th></tr>
-    <tr><td>Two substantially independent channels</td><td><span class="tag high">High confidence</span></td></tr>
-    <tr><td>Hold music concentrated on Channel 1</td><td><span class="tag high">High confidence</span></td></tr>
-    <tr><td>Nearby microphone activity on Channel 2</td><td><span class="tag high">High confidence</span></td></tr>
-    <tr><td>“Shut the fuck up”</td><td><span class="tag maybe">Probable</span></td></tr>
-    <tr><td>“Oh my God”</td><td><span class="tag maybe">Moderate to strong</span></td></tr>
-    <tr><td>“What did/do we do?”</td><td><span class="tag weak">Possible</span></td></tr>
-    <tr><td>Use of the name “Nolan”</td><td><span class="tag no">Not supported</span></td></tr>
-  </table>
+<section class="container section">
+    <h2>Why captions matter</h2>
+
+    <div class="two-column">
+        <div>
+            <h3>Ambiguous audio</h3>
+            <p>
+                Weak recordings contain incomplete phonetic information.
+                Compression, noise reduction and distance can erase or distort
+                important consonants.
+            </p>
+        </div>
+
+        <div>
+            <h3>Caption-induced priming</h3>
+            <p>
+                When suggested words are displayed before listening, the brain
+                may fit ambiguous sounds to the written phrase. Once formed,
+                that interpretation can become difficult to unhear.
+            </p>
+        </div>
+    </div>
 </section>
 
-<section>
-  <h2>Method and limitations</h2>
-  <div class="grid two">
-    <article class="card">
-      <h3>Method</h3>
-      <ol>
-        <li>Preserve the downloaded stream.</li>
+<section class="container section">
+    <h2>Findings by confidence</h2>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Finding</th>
+                    <th>Assessment</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Two substantially independent channels</td>
+                    <td><span class="status high">High confidence</span></td>
+                </tr>
+                <tr>
+                    <td>Hold music concentrated on Channel 1</td>
+                    <td><span class="status high">High confidence</span></td>
+                </tr>
+                <tr>
+                    <td>Nearby microphone activity on Channel 2</td>
+                    <td><span class="status high">High confidence</span></td>
+                </tr>
+                <tr>
+                    <td>“Shut the fuck up”</td>
+                    <td><span class="status moderate">Probable</span></td>
+                </tr>
+                <tr>
+                    <td>“Oh my God”</td>
+                    <td><span class="status moderate">Moderate to strong</span></td>
+                </tr>
+                <tr>
+                    <td>“What did/do we do?”</td>
+                    <td><span class="status uncertain">Possible</span></td>
+                </tr>
+                <tr>
+                    <td>Use of the name “Nolan”</td>
+                    <td><span class="status unsupported">Not supported</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="container section">
+    <h2>Method</h2>
+
+    <ol class="method-list">
+        <li>Preserve the downloaded YouTube stream unchanged.</li>
         <li>Create a lossless working copy.</li>
-        <li>Inspect codec and channel structure.</li>
-        <li>Separate the two channels.</li>
+        <li>Examine codec, channels, duration and signal structure.</li>
+        <li>Separate the two recorded channels.</li>
+        <li>Review the raw microphone-side channel.</li>
         <li>Apply conservative, non-generative filtering.</li>
-        <li>Compare raw and processed versions.</li>
-        <li>Use blind listening to reduce priming.</li>
-      </ol>
-    </article>
-    <article class="card">
-      <h3>Limitations</h3>
-      <ul>
-        <li>The source was transcoded through YouTube.</li>
-        <li>The native MDMR file has not been obtained.</li>
-        <li>Filtering cannot restore discarded information.</li>
-        <li>Aggressive processing can create speech-like artifacts.</li>
-        <li>Repeated listening increases expectation effects.</li>
-      </ul>
-    </article>
-  </div>
-  <div class="warning">No generative speech reconstruction was used to manufacture, complete, or replace missing words.</div>
+        <li>Compare interpretations across raw and processed versions.</li>
+        <li>Use blind listening to reduce caption-induced priming.</li>
+    </ol>
+
+    <div class="notice">
+        No language model or generative speech reconstruction was used to
+        manufacture, complete or replace missing words.
+    </div>
 </section>
 
-<section>
-  <h2>Repository</h2>
-  <p>Scripts, hashes, methodology, blind-listening materials, and additional artifacts are preserved in GitHub.</p>
-  <a class="button" href="https://github.com/Context-Reviewer/nolan-wells-call-audio-analysis-site">View repository</a>
+<section class="container section">
+    <h2>Limitations</h2>
+
+    <ul class="limitations">
+        <li>The working source was transcoded through YouTube.</li>
+        <li>The native MDMR file has not been obtained.</li>
+        <li>Filtering cannot restore information discarded before upload.</li>
+        <li>Aggressive processing may create or exaggerate speech-like artifacts.</li>
+        <li>Repeated listening can increase expectation and pattern completion.</li>
+        <li>Perceived wording does not independently establish conduct or intent.</li>
+    </ul>
+</section>
+
+<section class="container section repository">
+    <h2>Repository and reproducibility</h2>
+
+    <p>
+        The website source and selected public audio files are preserved in
+        the public GitHub repository.
+    </p>
+
+    <a
+        class="primary-link"
+        href="https://github.com/Context-Reviewer/nolan-wells-call-audio-analysis-site"
+    >
+        View website source
+    </a>
 </section>
 </main>
 
-<footer><div class="wrap">Reproducible listening and signal analysis. Not a certified forensic opinion.</div></footer>
-<script src="./app.js"></script>
+<footer>
+    <div class="container">
+        <p>
+            Reproducible listening and signal analysis. Not a certified
+            forensic opinion.
+        </p>
+    </div>
+</footer>
+
+<script type="module" src="./app.js"></script>
 </body>
 </html>
 
