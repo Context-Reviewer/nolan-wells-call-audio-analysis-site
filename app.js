@@ -2163,3 +2163,1325 @@ if (document.readyState === "loading") {
 } else {
     initializeVisualRefresh();
 }
+// selection-spectrogram-v1
+
+function initializeSelectionSpectrogram(attempt = 0) {
+    if (document.getElementById("selection-spectrogram-panel")) {
+        return;
+    }
+
+    const workspace = document.querySelector(
+        "#full-recording .lab-workspace"
+    );
+    const tabList = workspace?.querySelector(".lab-tab-list");
+
+    if (!workspace || !tabList) {
+        if (attempt < 40) {
+            window.setTimeout(
+                () => initializeSelectionSpectrogram(attempt + 1),
+                100
+            );
+        }
+        return;
+    }
+
+    const tabButton = document.createElement("button");
+    tabButton.className = "lab-tab-button spectrogram-tab-button";
+    tabButton.type = "button";
+    tabButton.setAttribute("role", "tab");
+    tabButton.setAttribute(
+        "aria-controls",
+        "selection-spectrogram-panel"
+    );
+    tabButton.setAttribute("aria-selected", "false");
+    tabButton.textContent = "Spectrogram";
+
+    const panel = document.createElement("div");
+    panel.id = "selection-spectrogram-panel";
+    panel.className = "lab-tab-panel spectrogram-lab-panel";
+    panel.setAttribute("role", "tabpanel");
+    panel.hidden = true;
+
+    panel.innerHTML = `
+        <section class="forensic-panel spectrogram-panel">
+            <div class="forensic-panel-heading">
+                <div>
+                    <p class="eyebrow">Raw decoded samples</p>
+                    <h3>Selection spectrogram</h3>
+                </div>
+                <output
+                    id="spectrogram-state"
+                    class="processing-state"
+                >
+                    Waiting for audio
+                </output>
+            </div>
+
+            <p class="panel-description">
+                This view plots frequency vertically and time horizontally
+                from the selected raw samples. Dark areas mean energy falls
+                below the current display range; they do not imply that time
+                was removed. No audio is modified by this analyzer.
+            </p>
+
+            <div class="spectrogram-presets">
+                <button
+                    id="spectrogram-first-18"
+                    type="button"
+                    disabled
+                >
+                    Select and render first 18 seconds
+                </button>
+                <button
+                    id="spectrogram-render"
+                    type="button"
+                    disabled
+                >
+                    Render current selection
+                </button>
+                <button
+                    id="spectrogram-export"
+                    type="button"
+                    disabled
+                >
+                    Download PNG
+                </button>
+
+                <label class="checkbox-control">
+                    <input
+                        id="spectrogram-auto-render"
+                        type="checkbox"
+                        checked
+                        disabled
+                    >
+                    Re-render after selection changes
+                </label>
+            </div>
+
+            <div class="spectrogram-control-grid">
+                <label>
+                    Input
+                    <select id="spectrogram-channel" disabled>
+                        <option value="channel2" selected>
+                            Channel 2 — nearby microphone
+                        </option>
+                        <option value="channel1">
+                            Channel 1 — call/hold-music side
+                        </option>
+                        <option value="mono">
+                            Mono average — (L + R) / 2
+                        </option>
+                        <option value="difference">
+                            Difference — L − R
+                        </option>
+                    </select>
+                </label>
+
+                <label>
+                    FFT size
+                    <select id="spectrogram-fft-size" disabled>
+                        <option value="512">512 — more time detail</option>
+                        <option value="1024">1024</option>
+                        <option value="2048" selected>
+                            2048 — balanced
+                        </option>
+                        <option value="4096">
+                            4096 — more frequency detail
+                        </option>
+                    </select>
+                </label>
+
+                <label>
+                    Window overlap
+                    <select id="spectrogram-overlap" disabled>
+                        <option value="0.5">50%</option>
+                        <option value="0.75" selected>75%</option>
+                        <option value="0.875">87.5%</option>
+                    </select>
+                </label>
+
+                <label>
+                    Maximum frequency
+                    <select id="spectrogram-max-frequency" disabled>
+                        <option value="4000">4 kHz</option>
+                        <option value="8000" selected>8 kHz</option>
+                        <option value="12000">12 kHz</option>
+                        <option value="20000">20 kHz</option>
+                    </select>
+                </label>
+
+                <label>
+                    Palette
+                    <select id="spectrogram-palette" disabled>
+                        <option value="inferno" selected>
+                            Inferno
+                        </option>
+                        <option value="ocean">Ocean</option>
+                        <option value="grayscale">Grayscale</option>
+                    </select>
+                </label>
+
+                <label class="checkbox-control">
+                    <input
+                        id="spectrogram-auto-contrast"
+                        type="checkbox"
+                        checked
+                        disabled
+                    >
+                    Auto contrast per selection
+                </label>
+
+                <label>
+                    Fixed floor
+                    <span class="range-row">
+                        <input
+                            id="spectrogram-floor"
+                            type="range"
+                            min="-140"
+                            max="-45"
+                            value="-105"
+                            step="1"
+                            disabled
+                        >
+                        <output id="spectrogram-floor-value">
+                            −105 dB
+                        </output>
+                    </span>
+                </label>
+
+                <label>
+                    Fixed ceiling
+                    <span class="range-row">
+                        <input
+                            id="spectrogram-ceiling"
+                            type="range"
+                            min="-70"
+                            max="0"
+                            value="-20"
+                            step="1"
+                            disabled
+                        >
+                        <output id="spectrogram-ceiling-value">
+                            −20 dB
+                        </output>
+                    </span>
+                </label>
+            </div>
+
+            <div class="spectrogram-canvas-shell">
+                <canvas
+                    id="selection-spectrogram-canvas"
+                    width="1200"
+                    height="520"
+                    aria-label="Spectrogram of the current audio selection"
+                ></canvas>
+                <div
+                    id="spectrogram-placeholder"
+                    class="spectrogram-placeholder"
+                >
+                    Select a passage, then render it.
+                </div>
+            </div>
+
+            <div
+                id="spectrogram-summary"
+                class="spectrogram-summary"
+            >
+                No spectrogram has been rendered.
+            </div>
+
+            <div class="warning-strip">
+                A spectrogram changes the visual representation, not the
+                source. Contrast settings can make weak energy easier to see,
+                but they can also make noise appear prominent. Compare
+                displays using the same fixed scale when making evidentiary
+                comparisons.
+            </div>
+        </section>
+    `;
+
+    workspace.append(panel);
+    tabList.append(tabButton);
+
+    const canvas = document.getElementById(
+        "selection-spectrogram-canvas"
+    );
+    const context = canvas.getContext("2d", {
+        alpha: false
+    });
+
+    const state = document.getElementById("spectrogram-state");
+    const placeholder = document.getElementById(
+        "spectrogram-placeholder"
+    );
+    const summary = document.getElementById("spectrogram-summary");
+    const first18Button = document.getElementById(
+        "spectrogram-first-18"
+    );
+    const renderButton = document.getElementById(
+        "spectrogram-render"
+    );
+    const exportButton = document.getElementById(
+        "spectrogram-export"
+    );
+    const autoRender = document.getElementById(
+        "spectrogram-auto-render"
+    );
+    const channelSelect = document.getElementById(
+        "spectrogram-channel"
+    );
+    const fftSizeSelect = document.getElementById(
+        "spectrogram-fft-size"
+    );
+    const overlapSelect = document.getElementById(
+        "spectrogram-overlap"
+    );
+    const maxFrequencySelect = document.getElementById(
+        "spectrogram-max-frequency"
+    );
+    const paletteSelect = document.getElementById(
+        "spectrogram-palette"
+    );
+    const autoContrast = document.getElementById(
+        "spectrogram-auto-contrast"
+    );
+    const floorControl = document.getElementById(
+        "spectrogram-floor"
+    );
+    const ceilingControl = document.getElementById(
+        "spectrogram-ceiling"
+    );
+    const floorValue = document.getElementById(
+        "spectrogram-floor-value"
+    );
+    const ceilingValue = document.getElementById(
+        "spectrogram-ceiling-value"
+    );
+
+    const controls = [
+        first18Button,
+        renderButton,
+        autoRender,
+        channelSelect,
+        fftSizeSelect,
+        overlapSelect,
+        maxFrequencySelect,
+        paletteSelect,
+        autoContrast,
+        floorControl,
+        ceilingControl
+    ];
+
+    let lastRender = null;
+    let scheduledRender = null;
+    const hannCache = new Map();
+
+    const setAnalyzerEnabled = (enabled) => {
+        controls.forEach((control) => {
+            control.disabled = !enabled;
+        });
+        exportButton.disabled = !enabled || !lastRender;
+        state.textContent = enabled
+            ? "Ready"
+            : "Waiting for audio";
+    };
+
+    const showTab = () => {
+        workspace
+            .querySelectorAll(".lab-tab-panel")
+            .forEach((otherPanel) => {
+                otherPanel.hidden = true;
+            });
+
+        tabList
+            .querySelectorAll(".lab-tab-button")
+            .forEach((otherButton) => {
+                otherButton.classList.remove("active");
+                otherButton.setAttribute(
+                    "aria-selected",
+                    "false"
+                );
+            });
+
+        panel.hidden = false;
+        tabButton.classList.add("active");
+        tabButton.setAttribute("aria-selected", "true");
+
+        if (decodedAudio && activeRegion && !lastRender) {
+            window.setTimeout(renderSpectrogram, 40);
+        }
+    };
+
+    tabButton.addEventListener("click", showTab);
+
+    function getHann(size) {
+        if (hannCache.has(size)) {
+            return hannCache.get(size);
+        }
+
+        const windowValues = new Float64Array(size);
+
+        for (let index = 0; index < size; index += 1) {
+            windowValues[index] =
+                0.5 -
+                0.5 *
+                    Math.cos(
+                        (2 * Math.PI * index) / (size - 1)
+                    );
+        }
+
+        hannCache.set(size, windowValues);
+        return windowValues;
+    }
+
+    function fftInPlace(real, imaginary) {
+        const size = real.length;
+        let target = 0;
+
+        for (let index = 1; index < size; index += 1) {
+            let bit = size >> 1;
+
+            while (target & bit) {
+                target ^= bit;
+                bit >>= 1;
+            }
+
+            target ^= bit;
+
+            if (index < target) {
+                const realValue = real[index];
+                real[index] = real[target];
+                real[target] = realValue;
+
+                const imaginaryValue = imaginary[index];
+                imaginary[index] = imaginary[target];
+                imaginary[target] = imaginaryValue;
+            }
+        }
+
+        for (
+            let blockSize = 2;
+            blockSize <= size;
+            blockSize <<= 1
+        ) {
+            const angle = (-2 * Math.PI) / blockSize;
+            const blockCosine = Math.cos(angle);
+            const blockSine = Math.sin(angle);
+            const half = blockSize >> 1;
+
+            for (
+                let blockStart = 0;
+                blockStart < size;
+                blockStart += blockSize
+            ) {
+                let cosine = 1;
+                let sine = 0;
+
+                for (
+                    let offset = 0;
+                    offset < half;
+                    offset += 1
+                ) {
+                    const evenIndex = blockStart + offset;
+                    const oddIndex = evenIndex + half;
+
+                    const oddReal =
+                        real[oddIndex] * cosine -
+                        imaginary[oddIndex] * sine;
+                    const oddImaginary =
+                        real[oddIndex] * sine +
+                        imaginary[oddIndex] * cosine;
+
+                    const evenReal = real[evenIndex];
+                    const evenImaginary =
+                        imaginary[evenIndex];
+
+                    real[evenIndex] =
+                        evenReal + oddReal;
+                    imaginary[evenIndex] =
+                        evenImaginary + oddImaginary;
+                    real[oddIndex] =
+                        evenReal - oddReal;
+                    imaginary[oddIndex] =
+                        evenImaginary - oddImaginary;
+
+                    const nextCosine =
+                        cosine * blockCosine -
+                        sine * blockSine;
+                    sine =
+                        cosine * blockSine +
+                        sine * blockCosine;
+                    cosine = nextCosine;
+                }
+            }
+        }
+    }
+
+    function percentile(values, probability) {
+        if (!values.length) {
+            return 0;
+        }
+
+        values.sort((first, second) => first - second);
+        const position =
+            (values.length - 1) *
+            Math.min(Math.max(probability, 0), 1);
+        const lower = Math.floor(position);
+        const upper = Math.ceil(position);
+
+        if (lower === upper) {
+            return values[lower];
+        }
+
+        const weight = position - lower;
+        return (
+            values[lower] * (1 - weight) +
+            values[upper] * weight
+        );
+    }
+
+    function interpolateStops(stops, value) {
+        const safeValue = Math.min(Math.max(value, 0), 1);
+
+        for (let index = 1; index < stops.length; index += 1) {
+            const previous = stops[index - 1];
+            const current = stops[index];
+
+            if (safeValue <= current[0]) {
+                const span = current[0] - previous[0] || 1;
+                const fraction =
+                    (safeValue - previous[0]) / span;
+
+                return [
+                    Math.round(
+                        previous[1] +
+                            (current[1] - previous[1]) *
+                                fraction
+                    ),
+                    Math.round(
+                        previous[2] +
+                            (current[2] - previous[2]) *
+                                fraction
+                    ),
+                    Math.round(
+                        previous[3] +
+                            (current[3] - previous[3]) *
+                                fraction
+                    )
+                ];
+            }
+        }
+
+        return stops[stops.length - 1].slice(1);
+    }
+
+    function paletteColor(name, value) {
+        if (name === "grayscale") {
+            const gray = Math.round(
+                255 * Math.min(Math.max(value, 0), 1)
+            );
+            return [gray, gray, gray];
+        }
+
+        if (name === "ocean") {
+            return interpolateStops(
+                [
+                    [0, 3, 8, 18],
+                    [0.2, 8, 31, 58],
+                    [0.45, 13, 86, 117],
+                    [0.7, 56, 158, 177],
+                    [0.88, 157, 219, 201],
+                    [1, 244, 247, 211]
+                ],
+                value
+            );
+        }
+
+        return interpolateStops(
+            [
+                [0, 0, 0, 4],
+                [0.14, 27, 12, 65],
+                [0.3, 74, 12, 107],
+                [0.48, 126, 30, 105],
+                [0.65, 181, 54, 84],
+                [0.8, 229, 97, 51],
+                [0.92, 250, 166, 38],
+                [1, 252, 255, 164]
+            ],
+            value
+        );
+    }
+
+    function getInputArrays() {
+        const channel1 = decodedAudio.getChannelData(0);
+        const channel2 = decodedAudio.numberOfChannels > 1
+            ? decodedAudio.getChannelData(1)
+            : channel1;
+
+        return {
+            channel1,
+            channel2
+        };
+    }
+
+    function inputSample(
+        mode,
+        channel1,
+        channel2,
+        sampleIndex
+    ) {
+        const left = channel1[sampleIndex] || 0;
+        const right = channel2[sampleIndex] || 0;
+
+        if (mode === "channel1") {
+            return left;
+        }
+
+        if (mode === "mono") {
+            return (left + right) * 0.5;
+        }
+
+        if (mode === "difference") {
+            return left - right;
+        }
+
+        return right;
+    }
+
+    function drawLabel(
+        targetContext,
+        text,
+        x,
+        y,
+        alignment = "left"
+    ) {
+        targetContext.textAlign = alignment;
+        targetContext.fillStyle = "#aebdca";
+        targetContext.font =
+            "12px ui-sans-serif, system-ui, sans-serif";
+        targetContext.fillText(text, x, y);
+    }
+
+    async function renderSpectrogram() {
+        if (!decodedAudio || !activeRegion) {
+            state.textContent = "Select a passage first";
+            summary.textContent =
+                "No active waveform selection is available.";
+            return;
+        }
+
+        renderButton.disabled = true;
+        first18Button.disabled = true;
+        exportButton.disabled = true;
+        state.textContent = "Rendering…";
+        placeholder.hidden = true;
+
+        await new Promise((resolve) => {
+            window.requestAnimationFrame(resolve);
+        });
+
+        const started = performance.now();
+        const sampleRate = decodedAudio.sampleRate;
+        const selectionStartSeconds = Math.max(
+            0,
+            activeRegion.start
+        );
+        const selectionEndSeconds = Math.min(
+            decodedAudio.duration,
+            activeRegion.end
+        );
+        const startSample = Math.floor(
+            selectionStartSeconds * sampleRate
+        );
+        const endSample = Math.ceil(
+            selectionEndSeconds * sampleRate
+        );
+        const sampleCount = Math.max(
+            1,
+            endSample - startSample
+        );
+
+        const fftSize = Number(fftSizeSelect.value);
+        const overlap = Number(overlapSelect.value);
+        const baseHop = Math.max(
+            1,
+            Math.round(fftSize * (1 - overlap))
+        );
+        const maxFrequency = Math.min(
+            Number(maxFrequencySelect.value),
+            sampleRate / 2
+        );
+
+        const shellWidth =
+            canvas.parentElement.clientWidth || 1100;
+        const cssWidth = Math.max(
+            620,
+            Math.min(1420, Math.floor(shellWidth - 2))
+        );
+        const cssHeight = Math.max(
+            480,
+            Math.min(660, Math.round(cssWidth * 0.48))
+        );
+        const leftMargin = 70;
+        const rightMargin = 24;
+        const topMargin = 28;
+        const energyHeight = 82;
+        const bottomMargin = 52;
+        const gap = 42;
+        const plotWidth = Math.max(
+            320,
+            cssWidth - leftMargin - rightMargin
+        );
+        const plotHeight = Math.max(
+            240,
+            cssHeight -
+                topMargin -
+                energyHeight -
+                bottomMargin -
+                gap
+        );
+
+        const maximumFrames = Math.min(
+            1500,
+            Math.max(420, Math.floor(plotWidth * 1.25))
+        );
+
+        let hopSize = baseHop;
+        const possibleFrames =
+            sampleCount <= fftSize
+                ? 1
+                : 1 +
+                  Math.floor(
+                      (sampleCount - fftSize) / hopSize
+                  );
+
+        if (possibleFrames > maximumFrames) {
+            hopSize = Math.max(
+                baseHop,
+                Math.ceil(
+                    (sampleCount - fftSize) /
+                        Math.max(maximumFrames - 1, 1)
+                )
+            );
+        }
+
+        const frameCount =
+            sampleCount <= fftSize
+                ? 1
+                : Math.max(
+                      1,
+                      1 +
+                          Math.floor(
+                              (sampleCount - fftSize) /
+                                  hopSize
+                          )
+                  );
+
+        const maximumBin = Math.max(
+            1,
+            Math.min(
+                fftSize / 2,
+                Math.floor(
+                    (maxFrequency / sampleRate) *
+                        fftSize
+                )
+            )
+        );
+
+        const { channel1, channel2 } = getInputArrays();
+        const inputMode = channelSelect.value;
+        const hann = getHann(fftSize);
+        const real = new Float64Array(fftSize);
+        const imaginary = new Float64Array(fftSize);
+        const pixels = new Float32Array(
+            frameCount * plotHeight
+        );
+        const rmsValues = new Float32Array(frameCount);
+        const normalization =
+            2 / Math.max(
+                hann.reduce(
+                    (total, value) => total + value,
+                    0
+                ),
+                1
+            );
+
+        for (
+            let frameIndex = 0;
+            frameIndex < frameCount;
+            frameIndex += 1
+        ) {
+            const frameStart =
+                startSample + frameIndex * hopSize;
+            let sumSquares = 0;
+
+            real.fill(0);
+            imaginary.fill(0);
+
+            for (
+                let sampleOffset = 0;
+                sampleOffset < fftSize;
+                sampleOffset += 1
+            ) {
+                const absoluteIndex =
+                    frameStart + sampleOffset;
+
+                const sample =
+                    absoluteIndex < endSample
+                        ? inputSample(
+                              inputMode,
+                              channel1,
+                              channel2,
+                              absoluteIndex
+                          )
+                        : 0;
+
+                sumSquares += sample * sample;
+                real[sampleOffset] =
+                    sample * hann[sampleOffset];
+            }
+
+            rmsValues[frameIndex] =
+                20 *
+                Math.log10(
+                    Math.sqrt(
+                        sumSquares / fftSize
+                    ) + 1e-12
+                );
+
+            fftInPlace(real, imaginary);
+
+            for (
+                let pixelY = 0;
+                pixelY < plotHeight;
+                pixelY += 1
+            ) {
+                const frequencyFraction =
+                    1 -
+                    pixelY /
+                        Math.max(plotHeight - 1, 1);
+                const bin = Math.max(
+                    0,
+                    Math.min(
+                        maximumBin,
+                        Math.round(
+                            frequencyFraction *
+                                maximumBin
+                        )
+                    )
+                );
+                const magnitude =
+                    Math.hypot(
+                        real[bin],
+                        imaginary[bin]
+                    ) * normalization;
+
+                pixels[
+                    frameIndex * plotHeight + pixelY
+                ] =
+                    20 *
+                    Math.log10(magnitude + 1e-12);
+            }
+
+            if (
+                frameIndex > 0 &&
+                frameIndex % 180 === 0
+            ) {
+                state.textContent =
+                    `Rendering ${Math.round(
+                        (frameIndex / frameCount) * 100
+                    )}%…`;
+
+                await new Promise((resolve) => {
+                    window.setTimeout(resolve, 0);
+                });
+            }
+        }
+
+        let floorDb = Number(floorControl.value);
+        let ceilingDb = Number(ceilingControl.value);
+
+        if (autoContrast.checked) {
+            const samples = [];
+            const stride = Math.max(
+                1,
+                Math.floor(pixels.length / 24000)
+            );
+
+            for (
+                let index = 0;
+                index < pixels.length;
+                index += stride
+            ) {
+                const value = pixels[index];
+
+                if (Number.isFinite(value)) {
+                    samples.push(value);
+                }
+            }
+
+            ceilingDb = Math.min(
+                0,
+                percentile(samples, 0.995)
+            );
+            floorDb = Math.max(
+                -150,
+                percentile(samples, 0.06)
+            );
+
+            if (ceilingDb - floorDb < 48) {
+                floorDb = ceilingDb - 48;
+            }
+        }
+
+        if (ceilingDb <= floorDb + 10) {
+            ceilingDb = floorDb + 10;
+        }
+
+        const devicePixelRatioValue = Math.min(
+            window.devicePixelRatio || 1,
+            2
+        );
+
+        canvas.width = Math.round(
+            cssWidth * devicePixelRatioValue
+        );
+        canvas.height = Math.round(
+            cssHeight * devicePixelRatioValue
+        );
+        canvas.style.height = `${cssHeight}px`;
+
+        context.setTransform(
+            devicePixelRatioValue,
+            0,
+            0,
+            devicePixelRatioValue,
+            0,
+            0
+        );
+        context.fillStyle = "#080c10";
+        context.fillRect(0, 0, cssWidth, cssHeight);
+
+        const imageCanvas = document.createElement(
+            "canvas"
+        );
+        imageCanvas.width = frameCount;
+        imageCanvas.height = plotHeight;
+        const imageContext = imageCanvas.getContext(
+            "2d",
+            { alpha: false }
+        );
+        const image = imageContext.createImageData(
+            frameCount,
+            plotHeight
+        );
+        const palette = paletteSelect.value;
+        const range = ceilingDb - floorDb;
+
+        for (
+            let frameIndex = 0;
+            frameIndex < frameCount;
+            frameIndex += 1
+        ) {
+            for (
+                let pixelY = 0;
+                pixelY < plotHeight;
+                pixelY += 1
+            ) {
+                const dbValue =
+                    pixels[
+                        frameIndex *
+                            plotHeight +
+                            pixelY
+                    ];
+                const normalized =
+                    (dbValue - floorDb) / range;
+                const [red, green, blue] =
+                    paletteColor(
+                        palette,
+                        normalized
+                    );
+                const imageIndex =
+                    (pixelY * frameCount +
+                        frameIndex) *
+                    4;
+
+                image.data[imageIndex] = red;
+                image.data[imageIndex + 1] = green;
+                image.data[imageIndex + 2] = blue;
+                image.data[imageIndex + 3] = 255;
+            }
+        }
+
+        imageContext.putImageData(image, 0, 0);
+        context.imageSmoothingEnabled = true;
+        context.drawImage(
+            imageCanvas,
+            leftMargin,
+            topMargin,
+            plotWidth,
+            plotHeight
+        );
+
+        context.strokeStyle =
+            "rgba(206, 224, 238, 0.24)";
+        context.lineWidth = 1;
+
+        const frequencyTickCount = 4;
+
+        for (
+            let tick = 0;
+            tick <= frequencyTickCount;
+            tick += 1
+        ) {
+            const fraction =
+                tick / frequencyTickCount;
+            const y =
+                topMargin +
+                plotHeight -
+                fraction * plotHeight;
+            const frequency =
+                fraction * maxFrequency;
+
+            context.beginPath();
+            context.moveTo(leftMargin, y);
+            context.lineTo(
+                leftMargin + plotWidth,
+                y
+            );
+            context.stroke();
+
+            drawLabel(
+                context,
+                frequency >= 1000
+                    ? `${(frequency / 1000).toFixed(
+                          frequency % 1000 === 0
+                              ? 0
+                              : 1
+                      )} kHz`
+                    : `${Math.round(frequency)} Hz`,
+                leftMargin - 10,
+                y + 4,
+                "right"
+            );
+        }
+
+        const duration =
+            selectionEndSeconds -
+            selectionStartSeconds;
+        const timeTickCount = 6;
+
+        for (
+            let tick = 0;
+            tick <= timeTickCount;
+            tick += 1
+        ) {
+            const fraction = tick / timeTickCount;
+            const x =
+                leftMargin +
+                fraction * plotWidth;
+
+            context.strokeStyle =
+                "rgba(206, 224, 238, 0.16)";
+            context.beginPath();
+            context.moveTo(x, topMargin);
+            context.lineTo(
+                x,
+                topMargin + plotHeight
+            );
+            context.stroke();
+
+            drawLabel(
+                context,
+                `${(
+                    selectionStartSeconds +
+                    duration * fraction
+                ).toFixed(2)} s`,
+                x,
+                topMargin + plotHeight + 20,
+                "center"
+            );
+        }
+
+        context.strokeStyle =
+            "rgba(220, 235, 246, 0.65)";
+        context.strokeRect(
+            leftMargin,
+            topMargin,
+            plotWidth,
+            plotHeight
+        );
+
+        drawLabel(
+            context,
+            "Frequency",
+            10,
+            topMargin - 8,
+            "left"
+        );
+
+        drawLabel(
+            context,
+            `${floorDb.toFixed(1)} to ${ceilingDb.toFixed(
+                1
+            )} dB display range`,
+            leftMargin + plotWidth,
+            topMargin - 8,
+            "right"
+        );
+
+        const energyTop =
+            topMargin + plotHeight + gap;
+        const energyBottom =
+            energyTop + energyHeight;
+        const energyFloor = Math.min(
+            -100,
+            floorDb
+        );
+        const energyCeiling = -5;
+
+        context.fillStyle = "#0d141b";
+        context.fillRect(
+            leftMargin,
+            energyTop,
+            plotWidth,
+            energyHeight
+        );
+
+        context.strokeStyle =
+            "rgba(220, 235, 246, 0.2)";
+
+        [-80, -60, -40, -20].forEach(
+            (dbValue) => {
+                const fraction =
+                    (dbValue - energyFloor) /
+                    (energyCeiling -
+                        energyFloor);
+                const y =
+                    energyBottom -
+                    Math.min(
+                        Math.max(fraction, 0),
+                        1
+                    ) *
+                        energyHeight;
+
+                context.beginPath();
+                context.moveTo(leftMargin, y);
+                context.lineTo(
+                    leftMargin + plotWidth,
+                    y
+                );
+                context.stroke();
+
+                drawLabel(
+                    context,
+                    `${dbValue} dB`,
+                    leftMargin - 10,
+                    y + 4,
+                    "right"
+                );
+            }
+        );
+
+        context.strokeStyle = "#efc36b";
+        context.lineWidth = 1.5;
+        context.beginPath();
+
+        rmsValues.forEach((dbValue, index) => {
+            const x =
+                leftMargin +
+                (index /
+                    Math.max(
+                        rmsValues.length - 1,
+                        1
+                    )) *
+                    plotWidth;
+            const fraction =
+                (dbValue - energyFloor) /
+                (energyCeiling - energyFloor);
+            const y =
+                energyBottom -
+                Math.min(
+                    Math.max(fraction, 0),
+                    1
+                ) *
+                    energyHeight;
+
+            if (index === 0) {
+                context.moveTo(x, y);
+            }
+            else {
+                context.lineTo(x, y);
+            }
+        });
+
+        context.stroke();
+        context.strokeStyle =
+            "rgba(220, 235, 246, 0.65)";
+        context.strokeRect(
+            leftMargin,
+            energyTop,
+            plotWidth,
+            energyHeight
+        );
+
+        drawLabel(
+            context,
+            "Short-window RMS energy",
+            leftMargin,
+            energyTop - 9,
+            "left"
+        );
+
+        const elapsed =
+            performance.now() - started;
+        const effectiveOverlap =
+            1 - hopSize / fftSize;
+
+        lastRender = {
+            start: selectionStartSeconds,
+            end: selectionEndSeconds,
+            channel: inputMode,
+            fftSize,
+            hopSize,
+            frameCount,
+            maxFrequency,
+            floorDb,
+            ceilingDb,
+            elapsed
+        };
+
+        state.textContent = "Rendered";
+        summary.textContent =
+            `${formatTime(selectionStartSeconds)}–` +
+            `${formatTime(selectionEndSeconds)} · ` +
+            `${inputMode.replace("channel", "Channel ")} · ` +
+            `${sampleRate.toLocaleString()} Hz source · ` +
+            `${fftSize}-sample FFT · ` +
+            `${Math.round(effectiveOverlap * 100)}% effective overlap · ` +
+            `${frameCount.toLocaleString()} analysis frames · ` +
+            `${maxFrequency.toLocaleString()} Hz ceiling · ` +
+            `${floorDb.toFixed(1)} to ` +
+            `${ceilingDb.toFixed(1)} dB display · ` +
+            `${elapsed.toFixed(0)} ms`;
+
+        renderButton.disabled = false;
+        first18Button.disabled = false;
+        exportButton.disabled = false;
+    }
+
+    function scheduleSpectrogramRender() {
+        if (
+            !autoRender.checked ||
+            panel.hidden ||
+            !decodedAudio ||
+            !activeRegion
+        ) {
+            return;
+        }
+
+        window.clearTimeout(scheduledRender);
+        scheduledRender = window.setTimeout(
+            renderSpectrogram,
+            180
+        );
+    }
+
+    first18Button.addEventListener(
+        "click",
+        () => {
+            createSelection(0, 18, true);
+            showTab();
+            window.setTimeout(
+                renderSpectrogram,
+                120
+            );
+        }
+    );
+
+    renderButton.addEventListener(
+        "click",
+        renderSpectrogram
+    );
+
+    exportButton.addEventListener(
+        "click",
+        () => {
+            if (!lastRender) {
+                return;
+            }
+
+            canvas.toBlob((blob) => {
+                if (!blob) {
+                    return;
+                }
+
+                const link =
+                    document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download =
+                    `spectrogram-${lastRender.channel}-` +
+                    `${lastRender.start.toFixed(2)}-` +
+                    `${lastRender.end.toFixed(2)}.png`;
+                link.click();
+
+                window.setTimeout(() => {
+                    URL.revokeObjectURL(link.href);
+                }, 1000);
+            }, "image/png");
+        }
+    );
+
+    floorControl.addEventListener("input", () => {
+        floorValue.textContent =
+            `${Number(floorControl.value)} dB`;
+        scheduleSpectrogramRender();
+    });
+
+    ceilingControl.addEventListener(
+        "input",
+        () => {
+            ceilingValue.textContent =
+                `${Number(
+                    ceilingControl.value
+                )} dB`;
+            scheduleSpectrogramRender();
+        }
+    );
+
+    [
+        channelSelect,
+        fftSizeSelect,
+        overlapSelect,
+        maxFrequencySelect,
+        paletteSelect,
+        autoContrast
+    ].forEach((control) => {
+        control.addEventListener(
+            "change",
+            scheduleSpectrogramRender
+        );
+    });
+
+    regions.on(
+        "region-updated",
+        scheduleSpectrogramRender
+    );
+
+    wavesurfer.on("ready", () => {
+        setAnalyzerEnabled(true);
+    });
+
+    setAnalyzerEnabled(Boolean(decodedAudio));
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener(
+        "DOMContentLoaded",
+        () => initializeSelectionSpectrogram(),
+        { once: true }
+    );
+}
+else {
+    initializeSelectionSpectrogram();
+}

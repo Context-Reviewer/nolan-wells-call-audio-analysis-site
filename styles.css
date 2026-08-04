@@ -1302,3 +1302,125 @@ body.visual-refresh {
 @media (max-width: 430px) {
     .hero-metrics { grid-template-columns: 1fr; }
 }
+/* selection-spectrogram-v1 */
+
+.spectrogram-panel {
+    margin: 0;
+}
+
+.spectrogram-presets {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem;
+    margin: 1rem 0;
+}
+
+.spectrogram-presets button {
+    min-height: 2.55rem;
+    padding: 0.5rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 0.48rem;
+    background: var(--surface-2);
+    color: var(--text);
+    cursor: pointer;
+}
+
+.spectrogram-presets button:first-child {
+    border-color: rgba(127, 196, 239, 0.55);
+    background: var(--blue-dark);
+}
+
+.spectrogram-control-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.spectrogram-control-grid > label {
+    display: grid;
+    align-content: start;
+    gap: 0.35rem;
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.spectrogram-control-grid select {
+    min-height: 2.55rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 0.45rem;
+    background: #0d141b;
+    color: var(--text);
+}
+
+.spectrogram-canvas-shell {
+    position: relative;
+    min-height: 480px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 0.7rem;
+    background: #080c10;
+}
+
+#selection-spectrogram-canvas {
+    display: block;
+    width: 100%;
+    height: 520px;
+}
+
+.spectrogram-placeholder {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 2rem;
+    color: var(--muted);
+    text-align: center;
+    pointer-events: none;
+}
+
+.spectrogram-placeholder[hidden] {
+    display: none;
+}
+
+.spectrogram-summary {
+    margin: 0.75rem 0;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: #0d141b;
+    color: var(--muted);
+    font-family:
+        ui-monospace, SFMono-Regular, Consolas,
+        monospace;
+    font-size: 0.76rem;
+    overflow-wrap: anywhere;
+}
+
+.spectrogram-tab-button {
+    border-color: rgba(239, 195, 107, 0.28);
+}
+
+@media (max-width: 950px) {
+    .spectrogram-control-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 620px) {
+    .spectrogram-control-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .spectrogram-canvas-shell {
+        min-height: 410px;
+    }
+
+    #selection-spectrogram-canvas {
+        height: 440px;
+    }
+}
