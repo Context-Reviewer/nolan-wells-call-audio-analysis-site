@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="A reproducible, non-generative review of the publicly circulated Nolan Wells Sea Tow call.">
+  <title>Nolan Wells Sea Tow Call Audio Analysis</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Independent audio review</p>
+    <h1>Nolan Wells Sea Tow Call</h1>
+    <p class="lead">What the circulated recording supports, what remains ambiguous, and how captions can shape what listeners believe they hear.</p>
+    <div class="warning">Not a certified forensic report. The working source is a YouTube-derived copy, not the native MDMR file.</div>
+  </div>
+</header>
+
+<main class="wrap">
+<section>
+  <h2>Summary</h2>
+  <div class="grid three">
+    <article class="card"><span class="tag high">High confidence</span><h3>Independent channels</h3><p>The recording is not duplicated stereo. Its two channels contain substantially different audio.</p></article>
+    <article class="card"><span class="tag high">High confidence</span><h3>Hold music separation</h3><p>Most opening hold music is concentrated on one channel while nearby microphone activity appears on the other.</p></article>
+    <article class="card"><span class="tag no">Not supported</span><h3>No confirmed “Nolan”</h3><p>No examined passage contains a stable, independently recognizable utterance of the name “Nolan.”</p></article>
+  </div>
+</section>
+
+<section>
+  <h2>Source path</h2>
+  <div class="chain">
+    <span>Claimed MDMR CXone release</span><b>→</b><span>YouTube upload</span><b>→</b><span>Opus stream</span><b>→</b><span>Lossless working copy</span><b>→</b><span>Channel separation</span>
+  </div>
+  <p class="muted">The first step is based on the uploader’s provenance claim. This project has not independently obtained the native MDMR file.</p>
+</section>
+
+<section>
+  <div class="heading"><div><p class="eyebrow">Listen before reading</p><h2>Candidate A</h2></div><span class="tag maybe">Probable, not certain</span></div>
+  <p>Listen first, then reveal the interpretation.</p>
+  <div class="grid three">
+    <article class="card"><h3>Raw isolated channel</h3><audio controls preload="metadata" src="./assets/audio/candidate-a-raw.wav"></audio></article>
+    <article class="card"><h3>Conservative cleanup</h3><audio controls preload="metadata" src="./assets/audio/candidate-a-conservative.wav"></audio></article>
+    <article class="card diagnostic"><h3>Consonant-focused diagnostic</h3><audio controls preload="metadata" src="./assets/audio/candidate-a-consonant.wav"></audio><p class="muted">Diagnostic aid only; not stronger evidence than the conservative version.</p></article>
+  </div>
+  <button data-target="a-text">Reveal current interpretation</button>
+  <div class="reveal" id="a-text" hidden><strong>Current best interpretation:</strong> “Shut the fuck up.”<p>The wording is plausible across multiple versions, but the source quality does not justify certainty.</p></div>
+</section>
+
+<section>
+  <div class="heading"><div><p class="eyebrow">Listen before reading</p><h2>Candidate C</h2></div><span class="tag maybe">Moderate support</span></div>
+  <div class="grid three">
+    <article class="card"><h3>Raw isolated channel</h3><audio controls preload="metadata" src="./assets/audio/candidate-c-raw.wav"></audio></article>
+    <article class="card"><h3>Conservative cleanup</h3><audio controls preload="metadata" src="./assets/audio/candidate-c-conservative.wav"></audio></article>
+    <article class="card diagnostic"><h3>Vowel/formant diagnostic</h3><audio controls preload="metadata" src="./assets/audio/candidate-c-formant.wav"></audio><p class="muted">Emphasizes vowel and formant structure.</p></article>
+  </div>
+  <button data-target="c-text">Reveal current interpretation</button>
+  <div class="reveal" id="c-text" hidden><strong>Current best interpretation:</strong> “Oh my God,” followed by a possible “what did we do?” or “what do we do?”<p>“Oh my God” is more stable. The trailing words remain ambiguous.</p></div>
+</section>
+
+<section>
+  <h2>What about “Nolan”?</h2>
+  <div class="card finding">
+    <h3>We could not confirm a stable utterance of the name.</h3>
+    <p>This does not prove the name was never spoken. It means this YouTube-derived recording does not support confidently transcribing it in the examined passages.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Why captions matter</h2>
+  <div class="grid two">
+    <article class="card"><h3>Ambiguous audio</h3><p>Compression, distance, and noise suppression can erase or distort phonetic detail.</p></article>
+    <article class="card"><h3>Caption-induced priming</h3><p>When words appear before listening, the brain may fit ambiguous sound to the suggested phrase. Once formed, the interpretation can become difficult to unhear.</p></article>
+  </div>
+</section>
+
+<section>
+  <h2>Findings by confidence</h2>
+  <table>
+    <tr><th>Finding</th><th>Assessment</th></tr>
+    <tr><td>Two substantially independent channels</td><td><span class="tag high">High confidence</span></td></tr>
+    <tr><td>Hold music concentrated on Channel 1</td><td><span class="tag high">High confidence</span></td></tr>
+    <tr><td>Nearby microphone activity on Channel 2</td><td><span class="tag high">High confidence</span></td></tr>
+    <tr><td>“Shut the fuck up”</td><td><span class="tag maybe">Probable</span></td></tr>
+    <tr><td>“Oh my God”</td><td><span class="tag maybe">Moderate to strong</span></td></tr>
+    <tr><td>“What did/do we do?”</td><td><span class="tag weak">Possible</span></td></tr>
+    <tr><td>Use of the name “Nolan”</td><td><span class="tag no">Not supported</span></td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Method and limitations</h2>
+  <div class="grid two">
+    <article class="card">
+      <h3>Method</h3>
+      <ol>
+        <li>Preserve the downloaded stream.</li>
+        <li>Create a lossless working copy.</li>
+        <li>Inspect codec and channel structure.</li>
+        <li>Separate the two channels.</li>
+        <li>Apply conservative, non-generative filtering.</li>
+        <li>Compare raw and processed versions.</li>
+        <li>Use blind listening to reduce priming.</li>
+      </ol>
+    </article>
+    <article class="card">
+      <h3>Limitations</h3>
+      <ul>
+        <li>The source was transcoded through YouTube.</li>
+        <li>The native MDMR file has not been obtained.</li>
+        <li>Filtering cannot restore discarded information.</li>
+        <li>Aggressive processing can create speech-like artifacts.</li>
+        <li>Repeated listening increases expectation effects.</li>
+      </ul>
+    </article>
+  </div>
+  <div class="warning">No generative speech reconstruction was used to manufacture, complete, or replace missing words.</div>
+</section>
+
+<section>
+  <h2>Repository</h2>
+  <p>Scripts, hashes, methodology, blind-listening materials, and additional artifacts are preserved in GitHub.</p>
+  <a class="button" href="https://github.com/Context-Reviewer/nolan-wells-call-audio-analysis-site">View repository</a>
+</section>
+</main>
+
+<footer><div class="wrap">Reproducible listening and signal analysis. Not a certified forensic opinion.</div></footer>
+<script src="./app.js"></script>
+</body>
+</html>
+
