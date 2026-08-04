@@ -5089,3 +5089,778 @@ if (document.readyState === "loading") {
 else {
     initializeModelInterpretationAudioLoop();
 }
+// guided-listening-mode-v1
+
+function initializeGuidedListeningMode(attempt = 0) {
+    const lab = document.getElementById("full-recording");
+    const waveShell = lab?.querySelector(".wave-shell");
+    const labIntro = lab?.querySelector(".lab-intro");
+
+    if (
+        !lab ||
+        !waveShell ||
+        !labIntro ||
+        !channelMode ||
+        !filterPreset ||
+        !bypassFilters ||
+        !loopSelection
+    ) {
+        if (attempt < 80) {
+            window.setTimeout(
+                () => initializeGuidedListeningMode(
+                    attempt + 1
+                ),
+                100
+            );
+        }
+        return;
+    }
+
+    if (
+        document.getElementById(
+            "guided-listening-panel"
+        )
+    ) {
+        return;
+    }
+
+    document.body.classList.add(
+        "guided-listening-site"
+    );
+
+    const heading = lab.querySelector(
+        ".section-heading h2"
+    );
+
+    if (heading) {
+        heading.dataset.originalHeading =
+            heading.textContent || "";
+        heading.textContent =
+            "Listen to the recording";
+    }
+
+    const originalIntro = labIntro.innerHTML;
+
+    labIntro.innerHTML = `
+        Choose a passage and a listening mode below.
+        No audio or EQ experience is required.
+        The original recording remains available at all times.
+    `;
+
+    const manualHelp = document.createElement(
+        "details"
+    );
+    manualHelp.className =
+        "guided-manual-help";
+    manualHelp.innerHTML = `
+        <summary>
+            Manual waveform instructions
+        </summary>
+        <div>${originalIntro}</div>
+    `;
+    labIntro.insertAdjacentElement(
+        "afterend",
+        manualHelp
+    );
+
+    const panel = document.createElement("section");
+    panel.id = "guided-listening-panel";
+    panel.className = "guided-listening-panel";
+    panel.setAttribute(
+        "aria-labelledby",
+        "guided-listening-title"
+    );
+
+    panel.innerHTML = `
+        <div class="guided-listening-heading">
+            <div>
+                <p class="eyebrow">
+                    Simple listening mode
+                </p>
+                <h3 id="guided-listening-title">
+                    Three steps—no technical settings required
+                </h3>
+            </div>
+
+            <button
+                id="guided-advanced-toggle"
+                type="button"
+                aria-expanded="false"
+            >
+                Show technical controls
+            </button>
+        </div>
+
+        <div class="guided-step">
+            <div class="guided-step-number">1</div>
+            <div class="guided-step-content">
+                <h4>Choose what to hear</h4>
+                <p>
+                    These buttons select the passages discussed
+                    in the review. You can also drag across the
+                    waveform to select any other passage.
+                </p>
+
+                <div
+                    class="guided-choice-row"
+                    id="guided-passage-buttons"
+                >
+                    <button
+                        type="button"
+                        data-guided-passage="opening"
+                    >
+                        First 18 seconds
+                        <small>00:00.00–00:18.00</small>
+                    </button>
+
+                    <button
+                        type="button"
+                        data-guided-passage="candidate-a"
+                    >
+                        Candidate A
+                        <small>00:00.08–00:01.62</small>
+                    </button>
+
+                    <button
+                        type="button"
+                        data-guided-passage="candidate-c"
+                    >
+                        Candidate C
+                        <small>00:12.55–00:15.05</small>
+                    </button>
+
+                    <button
+                        type="button"
+                        data-guided-passage="current"
+                    >
+                        Use my waveform selection
+                        <small>Keep current boundaries</small>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="guided-step">
+            <div class="guided-step-number">2</div>
+            <div class="guided-step-content">
+                <h4>Choose how to hear it</h4>
+                <p>
+                    Start with the original. The other modes only
+                    change how the existing sound is presented;
+                    they do not create missing speech.
+                </p>
+
+                <div
+                    class="guided-mode-grid"
+                    id="guided-mode-buttons"
+                >
+                    <button
+                        type="button"
+                        data-guided-mode="original"
+                    >
+                        <strong>Original recording</strong>
+                        <span>
+                            Normal stereo with no filtering.
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        data-guided-mode="nearby"
+                    >
+                        <strong>Nearby microphone</strong>
+                        <span>
+                            Channel 2 in both ears; no filtering.
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        data-guided-mode="clearer"
+                    >
+                        <strong>Make speech clearer</strong>
+                        <span>
+                            Mild speech-focused filtering.
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        data-guided-mode="strong"
+                    >
+                        <strong>Strong speech focus</strong>
+                        <span>
+                            More aggressive; compare with raw.
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        data-guided-mode="rumble"
+                    >
+                        <strong>Reduce low rumble</strong>
+                        <span>
+                            Removes mostly low-frequency noise.
+                        </span>
+                    </button>
+                </div>
+
+                <div
+                    id="guided-mode-explanation"
+                    class="guided-mode-explanation"
+                >
+                    <strong>Original recording:</strong>
+                    no channel isolation or filtering.
+                </div>
+            </div>
+        </div>
+
+        <div class="guided-step">
+            <div class="guided-step-number">3</div>
+            <div class="guided-step-content">
+                <h4>Listen and compare</h4>
+                <p>
+                    Looping is usually easiest for short,
+                    unclear passages. Use A/B comparison to
+                    alternate between raw Channel 2 and the
+                    selected listening mode.
+                </p>
+
+                <div class="guided-playback-row">
+                    <button
+                        id="guided-play-once"
+                        type="button"
+                    >
+                        Play once
+                    </button>
+
+                    <button
+                        id="guided-loop"
+                        type="button"
+                    >
+                        Loop passage
+                    </button>
+
+                    <button
+                        id="guided-compare"
+                        type="button"
+                    >
+                        A/B: hear raw Channel 2
+                    </button>
+
+                    <button
+                        id="guided-stop"
+                        type="button"
+                    >
+                        Stop
+                    </button>
+                </div>
+
+                <output
+                    id="guided-listening-status"
+                    class="guided-listening-status"
+                    aria-live="polite"
+                >
+                    Choose a passage, then press Play once or
+                    Loop passage.
+                </output>
+            </div>
+        </div>
+
+        <details class="guided-safety-note">
+            <summary>
+                What the listening modes can—and cannot—do
+            </summary>
+            <p>
+                Filtering can reduce distracting frequencies or
+                emphasize the range where speech often occurs.
+                It cannot restore information discarded by the
+                source recording. Strong processing can also make
+                noise sound speech-like. Always compare an
+                interpretation with the original or raw Channel 2.
+            </p>
+        </details>
+    `;
+
+    manualHelp.insertAdjacentElement(
+        "afterend",
+        panel
+    );
+
+    const advancedTargets = [
+        lab.querySelector(".channel-panel"),
+        lab.querySelector(".spectrum-panel"),
+        lab.querySelector(".selection-panel"),
+        lab.querySelector(".processing-panel"),
+        lab.querySelector(".zoom-panel"),
+        lab.querySelector(
+            ".selection-analysis-panel"
+        )
+    ].filter(Boolean);
+
+    advancedTargets.forEach((element) => {
+        element.classList.add(
+            "guided-advanced-control"
+        );
+    });
+
+    const technicalTabPatterns = [
+        /measure/i,
+        /source/i
+    ];
+
+    const technicalTabButtons = Array.from(
+        lab.querySelectorAll(".lab-tab-button")
+    ).filter((button) =>
+        technicalTabPatterns.some((pattern) =>
+            pattern.test(button.textContent || "")
+        )
+    );
+
+    technicalTabButtons.forEach((button) => {
+        button.classList.add(
+            "guided-advanced-tab"
+        );
+    });
+
+    const advancedToggle = document.getElementById(
+        "guided-advanced-toggle"
+    );
+    const status = document.getElementById(
+        "guided-listening-status"
+    );
+    const modeExplanation = document.getElementById(
+        "guided-mode-explanation"
+    );
+    const compareButton = document.getElementById(
+        "guided-compare"
+    );
+
+    const passages = {
+        opening: {
+            start: 0,
+            end: 18,
+            label: "First 18 seconds"
+        },
+        "candidate-a": {
+            start: 0.08,
+            end: 1.62,
+            label: "Candidate A"
+        },
+        "candidate-c": {
+            start: 12.55,
+            end: 15.05,
+            label: "Candidate C"
+        }
+    };
+
+    const modes = {
+        original: {
+            label: "Original recording",
+            channel: "stereo",
+            preset: "bypass",
+            bypass: true,
+            explanation:
+                "<strong>Original recording:</strong> " +
+                "normal stereo with no filtering."
+        },
+        nearby: {
+            label: "Nearby microphone",
+            channel: "channel2",
+            preset: "bypass",
+            bypass: true,
+            explanation:
+                "<strong>Nearby microphone:</strong> " +
+                "Channel 2 is centered in both ears. " +
+                "No frequency filtering is applied."
+        },
+        clearer: {
+            label: "Make speech clearer",
+            channel: "channel2",
+            preset: "speech-mild",
+            bypass: false,
+            explanation:
+                "<strong>Make speech clearer:</strong> " +
+                "Channel 2 is centered and mildly filtered " +
+                "to reduce frequencies outside much of the " +
+                "speech range. Compare with raw audio."
+        },
+        strong: {
+            label: "Strong speech focus",
+            channel: "channel2",
+            preset: "speech-narrow",
+            bypass: false,
+            explanation:
+                "<strong>Strong speech focus:</strong> " +
+                "a narrower and more aggressive speech-band " +
+                "treatment. This can emphasize artifacts, so " +
+                "raw comparison is especially important."
+        },
+        rumble: {
+            label: "Reduce low rumble",
+            channel: "channel2",
+            preset: "rumble",
+            bypass: false,
+            explanation:
+                "<strong>Reduce low rumble:</strong> " +
+                "Channel 2 is centered and low-frequency " +
+                "noise is reduced. Most higher-frequency " +
+                "content is left alone."
+        }
+    };
+
+    let selectedPassage = null;
+    let selectedMode = "original";
+    let comparingRaw = false;
+
+    function dispatchChange(element) {
+        if (!element) {
+            return;
+        }
+
+        element.dispatchEvent(
+            new Event("change", {
+                bubbles: true
+            })
+        );
+    }
+
+    function highlightChoice(
+        selector,
+        attribute,
+        value
+    ) {
+        panel.querySelectorAll(selector).forEach(
+            (button) => {
+                const active =
+                    button.dataset[attribute] === value;
+
+                button.classList.toggle(
+                    "active",
+                    active
+                );
+                button.setAttribute(
+                    "aria-pressed",
+                    String(active)
+                );
+            }
+        );
+    }
+
+    function applyMode(
+        modeName,
+        options = {}
+    ) {
+        const configuration = modes[modeName];
+
+        if (!configuration) {
+            return;
+        }
+
+        channelMode.value = configuration.channel;
+        dispatchChange(channelMode);
+
+        filterPreset.value = configuration.preset;
+        dispatchChange(filterPreset);
+
+        bypassFilters.checked =
+            configuration.bypass;
+        dispatchChange(bypassFilters);
+
+        if (!options.temporary) {
+            selectedMode = modeName;
+            comparingRaw = false;
+            compareButton.textContent =
+                "A/B: hear raw Channel 2";
+
+            highlightChoice(
+                "[data-guided-mode]",
+                "guidedMode",
+                modeName
+            );
+
+            modeExplanation.innerHTML =
+                configuration.explanation;
+
+            status.textContent =
+                `${configuration.label} selected. ` +
+                "The audio has not been reconstructed.";
+        }
+    }
+
+    function ensureSelection() {
+        if (activeRegion) {
+            return true;
+        }
+
+        createSelection(0, 18, true);
+        selectedPassage = "opening";
+
+        highlightChoice(
+            "[data-guided-passage]",
+            "guidedPassage",
+            "opening"
+        );
+
+        status.textContent =
+            "The first 18 seconds were selected automatically.";
+
+        return Boolean(activeRegion);
+    }
+
+    function choosePassage(name) {
+        if (name === "current") {
+            if (!activeRegion) {
+                status.textContent =
+                    "Drag across the waveform first, or choose " +
+                    "one of the prepared passages.";
+                return;
+            }
+
+            selectedPassage = "current";
+            highlightChoice(
+                "[data-guided-passage]",
+                "guidedPassage",
+                name
+            );
+
+            status.textContent =
+                `Current waveform selection: ` +
+                `${formatTime(activeRegion.start)}–` +
+                `${formatTime(activeRegion.end)}.`;
+            return;
+        }
+
+        const passage = passages[name];
+
+        if (!passage) {
+            return;
+        }
+
+        createSelection(
+            passage.start,
+            passage.end,
+            true
+        );
+
+        selectedPassage = name;
+
+        highlightChoice(
+            "[data-guided-passage]",
+            "guidedPassage",
+            name
+        );
+
+        window.setTimeout(() => {
+            zoomToActiveSelection();
+        }, 40);
+
+        status.textContent =
+            `${passage.label} selected: ` +
+            `${formatTime(passage.start)}–` +
+            `${formatTime(passage.end)}.`;
+    }
+
+    async function startPlayback(looping) {
+        if (!ensureSelection()) {
+            return;
+        }
+
+        loopSelection.checked = looping;
+        dispatchChange(loopSelection);
+
+        try {
+            await playActiveSelection();
+
+            const modeLabel =
+                modes[selectedMode].label;
+
+            status.textContent =
+                `${looping ? "Looping" : "Playing"} ` +
+                `${formatTime(activeRegion.start)}–` +
+                `${formatTime(activeRegion.end)} using ` +
+                `${modeLabel}.`;
+        }
+        catch (error) {
+            status.textContent =
+                `Playback failed: ${error.message}`;
+        }
+    }
+
+    function stopPlayback() {
+        selectionPlaybackActive = false;
+        loopSelection.checked = false;
+        dispatchChange(loopSelection);
+        wavesurfer.pause();
+
+        status.textContent = "Playback stopped.";
+    }
+
+    function setAdvancedOpen(open) {
+        document.body.classList.toggle(
+            "guided-advanced-open",
+            open
+        );
+
+        advancedToggle.setAttribute(
+            "aria-expanded",
+            String(open)
+        );
+
+        advancedToggle.textContent =
+            open
+                ? "Hide technical controls"
+                : "Show technical controls";
+
+        try {
+            window.localStorage.setItem(
+                "nolan-guided-advanced-open",
+                String(open)
+            );
+        }
+        catch {
+            // Storage is optional.
+        }
+    }
+
+    panel.querySelectorAll(
+        "[data-guided-passage]"
+    ).forEach((button) => {
+        button.addEventListener("click", () => {
+            choosePassage(
+                button.dataset.guidedPassage
+            );
+        });
+    });
+
+    panel.querySelectorAll(
+        "[data-guided-mode]"
+    ).forEach((button) => {
+        button.addEventListener("click", () => {
+            applyMode(
+                button.dataset.guidedMode
+            );
+        });
+    });
+
+    document
+        .getElementById("guided-play-once")
+        .addEventListener("click", () => {
+            startPlayback(false);
+        });
+
+    document
+        .getElementById("guided-loop")
+        .addEventListener("click", () => {
+            startPlayback(true);
+        });
+
+    document
+        .getElementById("guided-stop")
+        .addEventListener(
+            "click",
+            stopPlayback
+        );
+
+    compareButton.addEventListener("click", () => {
+        if (selectedMode === "original") {
+            status.textContent =
+                "Choose Nearby microphone, Make speech " +
+                "clearer, Strong speech focus, or Reduce " +
+                "low rumble before using A/B comparison.";
+            return;
+        }
+
+        comparingRaw = !comparingRaw;
+
+        if (comparingRaw) {
+            applyMode("nearby", {
+                temporary: true
+            });
+
+            compareButton.textContent =
+                `A/B: return to ${modes[selectedMode].label}`;
+
+            status.textContent =
+                "A/B comparison: raw Channel 2 is active. " +
+                "Press the button again to return to the " +
+                "selected listening mode.";
+        }
+        else {
+            applyMode(selectedMode, {
+                temporary: true
+            });
+
+            compareButton.textContent =
+                "A/B: hear raw Channel 2";
+
+            status.textContent =
+                `A/B comparison: returned to ` +
+                `${modes[selectedMode].label}.`;
+        }
+    });
+
+    advancedToggle.addEventListener("click", () => {
+        setAdvancedOpen(
+            !document.body.classList.contains(
+                "guided-advanced-open"
+            )
+        );
+    });
+
+    regions.on("region-updated", (region) => {
+        if (region !== activeRegion) {
+            return;
+        }
+
+        selectedPassage = "current";
+
+        highlightChoice(
+            "[data-guided-passage]",
+            "guidedPassage",
+            "current"
+        );
+
+        status.textContent =
+            `Custom passage selected: ` +
+            `${formatTime(region.start)}–` +
+            `${formatTime(region.end)}.`;
+    });
+
+    let storedAdvanced = false;
+
+    try {
+        storedAdvanced =
+            window.localStorage.getItem(
+                "nolan-guided-advanced-open"
+            ) === "true";
+    }
+    catch {
+        storedAdvanced = false;
+    }
+
+    setAdvancedOpen(storedAdvanced);
+    applyMode("original");
+
+    const listenTab = Array.from(
+        lab.querySelectorAll(".lab-tab-button")
+    ).find((button) =>
+        /listen/i.test(button.textContent || "")
+    );
+
+    if (listenTab) {
+        listenTab.textContent =
+            "Listen — simple mode";
+    }
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener(
+        "DOMContentLoaded",
+        () => initializeGuidedListeningMode(),
+        { once: true }
+    );
+}
+else {
+    initializeGuidedListeningMode();
+}
