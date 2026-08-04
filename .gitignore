@@ -1,2 +1,6 @@
 backup-before-waveform-*
 backup-before-forensic-tools-*
+.venv-phonetic/
+.phonetic-work/
+.model-cache/
+backup-before-machine-hypotheses-*

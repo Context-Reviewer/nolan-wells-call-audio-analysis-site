@@ -1689,3 +1689,254 @@ window.addEventListener("beforeunload", () => {
 updateSignalPathStatus();
 applyGainSettings();
 applyFilterSettings();
+
+
+// machine-hypotheses-v1
+const hypothesisSearch = document.getElementById("hypothesis-search");
+const hypothesisDisplayFilter = document.getElementById("hypothesis-display-filter");
+const showWordSlots = document.getElementById("show-word-slots");
+const expandAllHypotheses = document.getElementById("expand-all-hypotheses");
+const collapseAllHypotheses = document.getElementById("collapse-all-hypotheses");
+const hypothesisLoadStatus = document.getElementById("hypothesis-load-status");
+const hypothesisRunSummary = document.getElementById("hypothesis-run-summary");
+const hypothesisSegmentsContainer = document.getElementById("hypothesis-segments");
+const hypothesisProvenance = document.getElementById("hypothesis-provenance");
+const hypothesisProvenanceJson = document.getElementById("hypothesis-provenance-json");
+let hypothesisPackage = null;
+let renderedHypothesisSegments = [];
+
+function hElement(tag, options = {}) {
+    const element = document.createElement(tag);
+    if (options.className) element.className = options.className;
+    if (options.text !== undefined) element.textContent = String(options.text);
+    if (options.type) element.type = options.type;
+    return element;
+}
+
+function hypothesisTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainder = seconds - minutes * 60;
+    return `${String(minutes).padStart(2, "0")}:${remainder.toFixed(2).padStart(5, "0")}`;
+}
+
+function agreementClass(band) {
+    if (band.includes("strong")) return "strong";
+    if (band.includes("substantial")) return "disagreement";
+    return "mixed";
+}
+
+function appendRunSummary(packageData) {
+    hypothesisRunSummary.textContent = "";
+    hypothesisRunSummary.className = "hypothesis-run-summary";
+    [
+        ["Status", packageData.status],
+        ["Generated", packageData.generated_at_utc],
+        ["Source SHA-256", packageData.source.sha256],
+        ["Channel 2 SHA-256", packageData.channel_extraction.sha256]
+    ].forEach(([heading, value]) => {
+        const card = hElement("div");
+        card.append(hElement("strong", { text: heading }), hElement("span", { text: value }));
+        hypothesisRunSummary.append(card);
+    });
+    hypothesisRunSummary.hidden = false;
+}
+
+function renderContextualHypotheses(segment) {
+    const section = hElement("section", { className: "hypothesis-subsection" });
+    section.append(hElement("h3", { text: "Contextual word hypotheses" }));
+    const list = hElement("ol", { className: "hypothesis-list" });
+    segment.contextual_hypotheses.forEach((hypothesis) => {
+        const item = hElement("li");
+        item.append(hElement("strong", { text: `${hypothesis.rank}. ${hypothesis.text || "[empty]"}` }));
+        const sources = hypothesis.sources.map((source) =>
+            `${source.run_id}; avg log probability ${source.avg_logprob.toFixed(3)}; no-speech ${source.no_speech_prob.toFixed(3)}`
+        );
+        item.append(hElement("span", {
+            className: "hypothesis-source-line",
+            text: `${hypothesis.supporting_runs} supporting configured run(s). ${sources.join(" | ")}`
+        }));
+        list.append(item);
+    });
+    if (segment.contextual_hypotheses.length === 0) {
+        list.append(hElement("li", { text: "No contextual text hypothesis was retained." }));
+    }
+    section.append(list);
+    return section;
+}
+
+function renderPhonemeHypotheses(segment) {
+    const section = hElement("section", { className: "hypothesis-subsection" });
+    section.append(hElement("h3", { text: "Independent CTC phoneme hypotheses" }));
+    const list = hElement("ol", { className: "hypothesis-list" });
+    segment.phoneme_hypotheses.forEach((hypothesis) => {
+        const item = hElement("li");
+        item.append(hElement("code", { text: hypothesis.phonemes }));
+        item.append(hElement("span", {
+            className: "hypothesis-source-line",
+            text: `Rank ${hypothesis.rank}; relative CTC log score ${hypothesis.relative_log_score.toFixed(3)}. This is not a word probability.`
+        }));
+        list.append(item);
+    });
+    if (segment.phoneme_hypotheses.length === 0) {
+        list.append(hElement("li", { text: "No phoneme hypothesis was retained." }));
+    }
+    section.append(list);
+    return section;
+}
+
+function renderWordSlots(segment) {
+    const section = hElement("section", { className: "hypothesis-subsection word-slot-section" });
+    section.append(hElement("h3", { text: "Time-aligned word alternatives" }));
+    const wrapper = hElement("div", { className: "table-wrap" });
+    const table = hElement("table", { className: "word-slot-table" });
+    const head = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    ["Interval", "Generated alternatives", "Scope"].forEach((heading) => headRow.append(hElement("th", { text: heading })));
+    head.append(headRow);
+    table.append(head);
+    const body = document.createElement("tbody");
+    segment.word_alternative_slots.forEach((slot) => {
+        const row = document.createElement("tr");
+        row.append(hElement("td", { text: `${hypothesisTime(slot.start)}–${hypothesisTime(slot.end)}` }));
+        const alternativesCell = document.createElement("td");
+        slot.alternatives.forEach((alternative) => {
+            alternativesCell.append(hElement("span", {
+                className: "word-alternative",
+                text: `${alternative.word} (${alternative.supporting_runs} run${alternative.supporting_runs === 1 ? "" : "s"})`
+            }));
+        });
+        row.append(alternativesCell, hElement("td", { text: slot.omission_note }));
+        body.append(row);
+    });
+    if (segment.word_alternative_slots.length === 0) {
+        const row = document.createElement("tr");
+        const cell = hElement("td", { text: "No word-level alternatives were available." });
+        cell.colSpan = 3;
+        row.append(cell);
+        body.append(row);
+    }
+    table.append(body);
+    wrapper.append(table);
+    section.append(wrapper);
+    return section;
+}
+
+function openHypothesisInterval(segment) {
+    document.getElementById("full-recording").scrollIntoView({ behavior: "smooth", block: "start" });
+    createSelection(segment.start, segment.end, true);
+    if (channelMode) {
+        channelMode.value = "channel2";
+        ensureAudioGraph().then(() => {
+            applyChannelRouting();
+            applyGainSettings();
+        }).catch(console.error);
+    }
+    window.setTimeout(zoomToActiveSelection, 350);
+}
+
+function renderHypothesisSegment(segment) {
+    const details = hElement("details", { className: "hypothesis-segment" });
+    details.dataset.agreement = agreementClass(segment.agreement.band);
+    details.dataset.searchable = [
+        ...segment.contextual_hypotheses.map((item) => item.text),
+        ...segment.phoneme_hypotheses.map((item) => item.phonemes),
+        ...segment.word_alternative_slots.flatMap((slot) => slot.alternatives.map((item) => item.word))
+    ].join(" ").toLowerCase();
+
+    const summary = document.createElement("summary");
+    const timeButton = hElement("button", {
+        className: "hypothesis-time-button",
+        text: `${hypothesisTime(segment.start)}–${hypothesisTime(segment.end)}`,
+        type: "button"
+    });
+    timeButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openHypothesisInterval(segment);
+    });
+
+    const best = segment.contextual_hypotheses[0];
+    const bestText = hElement("div", { className: "hypothesis-best-text" });
+    bestText.append(
+        hElement("strong", { text: best?.text || "[no retained word hypothesis]" }),
+        hElement("span", {
+            text: `${segment.speech_status}. ${segment.contextual_hypotheses.length} distinct textual group(s); ${segment.phoneme_hypotheses.length} phoneme candidate(s).`
+        })
+    );
+    const badge = hElement("span", {
+        className: `agreement-badge ${agreementClass(segment.agreement.band)}`,
+        text: segment.agreement.band
+    });
+    summary.append(timeButton, bestText, badge);
+    details.append(summary);
+
+    const body = hElement("div", { className: "hypothesis-body" });
+    body.append(renderContextualHypotheses(segment), renderPhonemeHypotheses(segment), renderWordSlots(segment));
+    const diagnostics = hElement("section", { className: "hypothesis-subsection" });
+    diagnostics.append(
+        hElement("h3", { text: "Interpretation limits" }),
+        hElement("p", { text: `${segment.agreement.note} ${segment.phoneme_diagnostics.note || ""}` })
+    );
+    body.append(diagnostics);
+    details.append(body);
+    return details;
+}
+
+function applyHypothesisFilters() {
+    const search = hypothesisSearch.value.trim().toLowerCase();
+    const display = hypothesisDisplayFilter.value;
+    renderedHypothesisSegments.forEach((element) => {
+        const matchesSearch = !search || element.dataset.searchable.includes(search);
+        const agreement = element.dataset.agreement;
+        let matchesDisplay = true;
+        if (display === "disagreement") matchesDisplay = agreement === "disagreement";
+        else if (display === "mixed") matchesDisplay = agreement === "mixed" || agreement === "disagreement";
+        else if (display === "agreement") matchesDisplay = agreement === "strong";
+        element.hidden = !(matchesSearch && matchesDisplay);
+    });
+}
+
+function setWordSlotVisibility() {
+    document.querySelectorAll(".word-slot-section").forEach((section) => {
+        section.hidden = !showWordSlots.checked;
+    });
+}
+
+async function loadHypothesisPackage() {
+    try {
+        const response = await fetch("./assets/data/hypotheses.json", { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}; the generator may not have run yet.`);
+        hypothesisPackage = await response.json();
+        if (hypothesisPackage.schema !== "experimental_machine_phonetic_hypotheses_v1") {
+            throw new Error(`Unexpected schema: ${hypothesisPackage.schema}`);
+        }
+        hypothesisLoadStatus.textContent = `${hypothesisPackage.segments.length} model-selected interval(s) loaded. Displayed text remains unverified model output.`;
+        appendRunSummary(hypothesisPackage);
+        hypothesisSegmentsContainer.textContent = "";
+        renderedHypothesisSegments = hypothesisPackage.segments.map(renderHypothesisSegment);
+        renderedHypothesisSegments.forEach((element) => hypothesisSegmentsContainer.append(element));
+        hypothesisProvenance.hidden = false;
+        hypothesisProvenanceJson.textContent = JSON.stringify({
+            schema: hypothesisPackage.schema,
+            generated_at_utc: hypothesisPackage.generated_at_utc,
+            status: hypothesisPackage.status,
+            warnings: hypothesisPackage.warnings,
+            source: hypothesisPackage.source,
+            channel_extraction: hypothesisPackage.channel_extraction,
+            configuration: hypothesisPackage.configuration,
+            environment: hypothesisPackage.environment,
+            models: hypothesisPackage.models,
+            limitations: hypothesisPackage.limitations
+        }, null, 2);
+        [hypothesisSearch, hypothesisDisplayFilter, showWordSlots, expandAllHypotheses, collapseAllHypotheses].forEach((control) => control.disabled = false);
+    } catch (error) {
+        hypothesisLoadStatus.textContent = `The static hypothesis package is not available: ${error.message}`;
+    }
+}
+
+hypothesisSearch?.addEventListener("input", applyHypothesisFilters);
+hypothesisDisplayFilter?.addEventListener("change", applyHypothesisFilters);
+showWordSlots?.addEventListener("change", setWordSlotVisibility);
+expandAllHypotheses?.addEventListener("click", () => renderedHypothesisSegments.filter((element) => !element.hidden).forEach((element) => element.open = true));
+collapseAllHypotheses?.addEventListener("click", () => renderedHypothesisSegments.forEach((element) => element.open = false));
+if (hypothesisSegmentsContainer) loadHypothesisPackage();

@@ -1,0 +1,845 @@
+from __future__ import annotations
+
+import argparse
+import dataclasses
+import datetime as dt
+import difflib
+import hashlib
+import importlib.metadata
+import json
+import math
+import platform
+import re
+import shutil
+import subprocess
+import sys
+from collections import defaultdict
+from pathlib import Path
+from typing import Any, Iterable, Sequence
+
+import numpy as np
+import soundfile as sf
+import torch
+from faster_whisper import WhisperModel
+from faster_whisper.utils import download_model
+from huggingface_hub import snapshot_download
+from transformers import AutoProcessor, Wav2Vec2ForCTC
+
+SCHEMA = "experimental_machine_phonetic_hypotheses_v1"
+WARNINGS = [
+    "These are experimental machine-generated phonetic and word hypotheses, not verified quotations.",
+    "Scores are model-specific relative values and are not factual probabilities that a word was spoken.",
+    "Contextual recognizers can generate plausible language that is weakly supported or absent in the audio.",
+    "The alternative set is finite and model-dependent; it is not exhaustive.",
+    "Speech segmentation is itself a model output and may include music, noise, or other non-speech material.",
+    "Every candidate must be checked against raw Channel 2 with browser processing bypassed.",
+    "The source is YouTube-derived and is not represented as the native MDMR file.",
+]
+
+
+@dataclasses.dataclass(frozen=True)
+class WhisperPass:
+    pass_id: str
+    description: str
+    beam_size: int
+    best_of: int
+    temperature: float
+    condition_on_previous_text: bool
+
+
+PASSES = [
+    WhisperPass(
+        "beam_unconditioned",
+        "Beam search; no prior-segment text conditioning",
+        10,
+        10,
+        0.0,
+        False,
+    ),
+    WhisperPass(
+        "beam_conditioned",
+        "Beam search; prior-segment text conditioning enabled",
+        10,
+        10,
+        0.0,
+        True,
+    ),
+    WhisperPass(
+        "sampling_unconditioned",
+        "Temperature sampling; no prior-segment text conditioning",
+        1,
+        8,
+        0.4,
+        False,
+    ),
+]
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source", required=True, type=Path)
+    parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--work-dir", required=True, type=Path)
+    parser.add_argument("--model-cache", required=True, type=Path)
+    parser.add_argument("--primary-model", default="large-v3")
+    parser.add_argument("--secondary-model", default="small.en")
+    parser.add_argument("--skip-secondary", action="store_true")
+    parser.add_argument(
+        "--phoneme-model",
+        default="facebook/wav2vec2-lv-60-espeak-cv-ft",
+    )
+    parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
+    parser.add_argument("--language", default="en")
+    parser.add_argument("--max-segment-seconds", type=float, default=24.0)
+    parser.add_argument("--merge-gap-seconds", type=float, default=0.35)
+    parser.add_argument("--phoneme-beam-width", type=int, default=24)
+    parser.add_argument("--phoneme-top-k", type=int, default=8)
+    parser.add_argument("--phoneme-nbest", type=int, default=5)
+    parser.add_argument("--skip-model-file-hashes", action="store_true")
+    return parser.parse_args()
+
+
+def utc_now() -> str:
+    return dt.datetime.now(dt.timezone.utc).isoformat()
+
+
+def run(command: Sequence[str]) -> None:
+    printable = subprocess.list2cmdline([str(item) for item in command])
+    print(f"\n> {printable}", flush=True)
+    completed = subprocess.run([str(item) for item in command], check=False)
+    if completed.returncode != 0:
+        raise RuntimeError(f"Command failed with exit code {completed.returncode}: {printable}")
+
+
+def sha256_file(path: Path, chunk_size: int = 8 * 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while chunk := stream.read(chunk_size):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def hash_model_tree(root: Path) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or path.suffix.lower() in {".lock", ".tmp", ".incomplete"}:
+            continue
+        relative = path.relative_to(root).as_posix()
+        print(f"Hashing model file: {relative}", flush=True)
+        records.append(
+            {"path": relative, "bytes": path.stat().st_size, "sha256": sha256_file(path)}
+        )
+    return records
+
+
+def model_revision_from_snapshot(path: Path) -> str | None:
+    parts = list(path.parts)
+    if "snapshots" not in parts:
+        return None
+    index = parts.index("snapshots")
+    return parts[index + 1] if index + 1 < len(parts) else None
+
+
+def package_versions(names: Iterable[str]) -> dict[str, str | None]:
+    result: dict[str, str | None] = {}
+    for name in names:
+        try:
+            result[name] = importlib.metadata.version(name)
+        except importlib.metadata.PackageNotFoundError:
+            result[name] = None
+    return result
+
+
+def extract_channel_2(source: Path, destination: Path) -> list[str]:
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise RuntimeError("FFmpeg is required but was not found in PATH.")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    command = [
+        ffmpeg,
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-i",
+        str(source),
+        "-vn",
+        "-af",
+        "pan=mono|c0=c1",
+        "-ar",
+        "16000",
+        "-ac",
+        "1",
+        "-c:a",
+        "pcm_s16le",
+        str(destination),
+    ]
+    run(command)
+    return command
+
+
+def clean_text(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def normalize_word(word: str) -> str:
+    normalized = re.sub(r"[^a-z0-9']+", "", word.lower())
+    return normalized or word.strip().lower()
+
+
+def choose_devices(requested: str) -> tuple[str, str, str]:
+    try:
+        import ctranslate2
+
+        ctranslate_cuda = ctranslate2.get_cuda_device_count() > 0
+    except Exception:
+        ctranslate_cuda = False
+
+    torch_cuda = torch.cuda.is_available()
+
+    if requested == "cuda":
+        if not ctranslate_cuda:
+            raise RuntimeError("CUDA was requested, but CTranslate2 did not detect a CUDA device.")
+        return "cuda", "float16", "cuda" if torch_cuda else "cpu"
+    if requested == "cpu":
+        return "cpu", "int8", "cpu"
+    return (
+        "cuda" if ctranslate_cuda else "cpu",
+        "float16" if ctranslate_cuda else "int8",
+        "cuda" if torch_cuda else "cpu",
+    )
+
+
+def serialize_word(word: Any) -> dict[str, Any]:
+    return {
+        "start": round(float(word.start), 3),
+        "end": round(float(word.end), 3),
+        "word": word.word,
+        "probability": round(float(word.probability), 6),
+    }
+
+
+def run_whisper_passes(
+    *,
+    model_label: str,
+    model_name: str,
+    audio_path: Path,
+    cache_dir: Path,
+    device: str,
+    compute_type: str,
+    language: str,
+    hash_files: bool,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    print(f"\nResolving contextual model: {model_name}", flush=True)
+    model_path = Path(download_model(model_name, cache_dir=str(cache_dir)))
+    print(f"Loading {model_name} on {device} ({compute_type})", flush=True)
+    model = WhisperModel(str(model_path), device=device, compute_type=compute_type)
+    run_records: list[dict[str, Any]] = []
+
+    for config in PASSES:
+        run_id = f"{model_label}:{config.pass_id}"
+        print(f"\nContextual pass: {run_id}", flush=True)
+        segments_iter, info = model.transcribe(
+            str(audio_path),
+            language=language,
+            task="transcribe",
+            beam_size=config.beam_size,
+            best_of=config.best_of,
+            temperature=config.temperature,
+            condition_on_previous_text=config.condition_on_previous_text,
+            word_timestamps=True,
+            vad_filter=True,
+            vad_parameters={
+                "threshold": 0.5,
+                "min_speech_duration_ms": 160,
+                "min_silence_duration_ms": 350,
+                "speech_pad_ms": 180,
+            },
+            compression_ratio_threshold=2.4,
+            log_prob_threshold=-1.0,
+            no_speech_threshold=0.6,
+            hallucination_silence_threshold=1.0,
+            initial_prompt=None,
+            prefix=None,
+            hotwords=None,
+        )
+        segments = []
+        for segment in segments_iter:
+            text = clean_text(segment.text)
+            if not text and not segment.words:
+                continue
+            segments.append(
+                {
+                    "id": int(segment.id),
+                    "start": round(float(segment.start), 3),
+                    "end": round(float(segment.end), 3),
+                    "text": text,
+                    "avg_logprob": round(float(segment.avg_logprob), 6),
+                    "no_speech_prob": round(float(segment.no_speech_prob), 6),
+                    "compression_ratio": round(float(segment.compression_ratio), 6),
+                    "temperature": None
+                    if segment.temperature is None
+                    else round(float(segment.temperature), 3),
+                    "words": [serialize_word(word) for word in (segment.words or [])],
+                }
+            )
+        run_records.append(
+            {
+                "run_id": run_id,
+                "model_label": model_label,
+                "model_name": model_name,
+                "pass_id": config.pass_id,
+                "description": config.description,
+                "decoder": dataclasses.asdict(config),
+                "language": info.language,
+                "language_probability": round(float(info.language_probability), 6),
+                "duration_seconds": round(float(info.duration), 3),
+                "duration_after_vad_seconds": round(float(info.duration_after_vad), 3),
+                "segments": segments,
+            }
+        )
+
+    metadata = {
+        "role": "contextual_asr",
+        "model_label": model_label,
+        "model_name": model_name,
+        "resolved_revision": model_revision_from_snapshot(model_path),
+        "local_model_tree_sha256": None if not hash_files else hash_model_tree(model_path),
+        "device": device,
+        "compute_type": compute_type,
+        "family_note": "Whisper-family contextual recognizer; outputs reflect acoustic evidence and learned language patterns.",
+    }
+    del model
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    return run_records, metadata
+
+
+def overlap(a_start: float, a_end: float, b_start: float, b_end: float) -> float:
+    return max(0.0, min(a_end, b_end) - max(a_start, b_start))
+
+
+def build_intervals(runs: list[dict[str, Any]], merge_gap: float, max_length: float) -> list[dict[str, float]]:
+    candidates = sorted(
+        (segment["start"], segment["end"])
+        for run_record in runs
+        for segment in run_record["segments"]
+        if segment["text"] and segment["no_speech_prob"] < 0.98
+    )
+    merged: list[dict[str, float]] = []
+    for start, end in candidates:
+        if end <= start:
+            continue
+        if not merged:
+            merged.append({"start": start, "end": end})
+            continue
+        current = merged[-1]
+        combined_end = max(current["end"], end)
+        if start <= current["end"] + merge_gap:  # interval_union_before_length_split
+            current["end"] = combined_end
+        else:
+            merged.append({"start": start, "end": end})
+
+    final: list[dict[str, float]] = []
+    for interval in merged:
+        start, end = interval["start"], interval["end"]
+        while end - start > max_length:
+            final.append({"start": round(start, 3), "end": round(start + max_length, 3)})
+            start += max_length
+        final.append({"start": round(start, 3), "end": round(end, 3)})
+    return final
+
+
+def hypothesis_for_interval(run_record: dict[str, Any], start: float, end: float) -> dict[str, Any] | None:
+    matching = [
+        segment
+        for segment in run_record["segments"]
+        if overlap(start, end, segment["start"], segment["end"]) > 0
+    ]
+    if not matching:
+        return None
+    matching.sort(key=lambda item: item["start"])
+    durations = [max(item["end"] - item["start"], 0.001) for item in matching]
+    total = sum(durations)
+    return {
+        "run_id": run_record["run_id"],
+        "model_label": run_record["model_label"],
+        "model_name": run_record["model_name"],
+        "pass_id": run_record["pass_id"],
+        "text": clean_text(" ".join(item["text"] for item in matching)),
+        "avg_logprob": round(
+            sum(item["avg_logprob"] * duration for item, duration in zip(matching, durations)) / total,
+            6,
+        ),
+        "no_speech_prob": round(max(item["no_speech_prob"] for item in matching), 6),
+        "words": [
+            word
+            for item in matching
+            for word in item["words"]
+            if overlap(start, end, word["start"], word["end"]) > 0
+        ],
+    }
+
+
+def deduplicate_hypotheses(hypotheses: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, dict[str, Any]] = {}
+    for hypothesis in hypotheses:
+        key = clean_text(hypothesis["text"].lower())
+        record = grouped.setdefault(
+            key,
+            {
+                "text": hypothesis["text"],
+                "sources": [],
+                "best_avg_logprob": hypothesis["avg_logprob"],
+                "highest_no_speech_prob": hypothesis["no_speech_prob"],
+            },
+        )
+        record["sources"].append(
+            {
+                "run_id": hypothesis["run_id"],
+                "model_label": hypothesis["model_label"],
+                "model_name": hypothesis["model_name"],
+                "pass_id": hypothesis["pass_id"],
+                "avg_logprob": hypothesis["avg_logprob"],
+                "no_speech_prob": hypothesis["no_speech_prob"],
+            }
+        )
+        record["best_avg_logprob"] = max(record["best_avg_logprob"], hypothesis["avg_logprob"])
+        record["highest_no_speech_prob"] = max(
+            record["highest_no_speech_prob"], hypothesis["no_speech_prob"]
+        )
+    output = sorted(
+        grouped.values(),
+        key=lambda item: (len(item["sources"]), item["best_avg_logprob"]),
+        reverse=True,
+    )
+    for rank, item in enumerate(output, start=1):
+        item["rank"] = rank
+        item["supporting_runs"] = len(item["sources"])
+    return output
+
+
+def temporal_iou(first: dict[str, Any], second: dict[str, Any]) -> float:
+    common = overlap(first["start"], first["end"], second["start"], second["end"])
+    union = max(first["end"], second["end"]) - min(first["start"], second["start"])
+    return common / union if union > 0 else 0.0
+
+
+def align_word_alternatives(raw_hypotheses: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    all_words = [
+        {**word, "run_id": h["run_id"], "model_label": h["model_label"], "pass_id": h["pass_id"]}
+        for h in raw_hypotheses
+        for word in h["words"]
+        if normalize_word(word["word"])
+    ]
+    if not all_words:
+        return []
+    base = max(raw_hypotheses, key=lambda item: (item["avg_logprob"], len(item["words"])))
+    slots = [
+        {"start": word["start"], "end": word["end"], "members": []}
+        for word in base["words"]
+    ]
+    if not slots:
+        slots = [
+            {"start": word["start"], "end": word["end"], "members": []}
+            for word in sorted(all_words, key=lambda item: item["start"])
+        ]
+
+    for word in all_words:
+        midpoint = (word["start"] + word["end"]) / 2
+        best_slot = None
+        best_score = -1e9
+        for slot in slots:
+            slot_midpoint = (slot["start"] + slot["end"]) / 2
+            score = temporal_iou(word, slot) * 2 - abs(midpoint - slot_midpoint)
+            if score > best_score:
+                best_score, best_slot = score, slot
+        assert best_slot is not None
+        if temporal_iou(word, best_slot) == 0 and abs(midpoint - (best_slot["start"] + best_slot["end"]) / 2) > 0.45:
+            best_slot = {"start": word["start"], "end": word["end"], "members": []}
+            slots.append(best_slot)
+        best_slot["members"].append(word)
+        best_slot["start"] = min(best_slot["start"], word["start"])
+        best_slot["end"] = max(best_slot["end"], word["end"])
+
+    output = []
+    for slot_index, slot in enumerate(sorted(slots, key=lambda item: item["start"]), start=1):
+        alternatives: dict[str, dict[str, Any]] = {}
+        for member in slot["members"]:
+            key = normalize_word(member["word"])
+            alt = alternatives.setdefault(
+                key,
+                {"word": member["word"].strip(), "sources": [], "maximum_word_probability": member["probability"]},
+            )
+            alt["sources"].append(
+                {
+                    "run_id": member["run_id"],
+                    "model_label": member["model_label"],
+                    "pass_id": member["pass_id"],
+                    "word_probability": member["probability"],
+                }
+            )
+            alt["maximum_word_probability"] = max(alt["maximum_word_probability"], member["probability"])
+        alt_list = sorted(
+            alternatives.values(),
+            key=lambda item: (len({source["run_id"] for source in item["sources"]}), item["maximum_word_probability"]),
+            reverse=True,
+        )
+        for rank, alt in enumerate(alt_list, start=1):
+            alt["rank"] = rank
+            alt["supporting_runs"] = len({source["run_id"] for source in alt["sources"]})
+        output.append(
+            {
+                "slot": slot_index,
+                "start": round(float(slot["start"]), 3),
+                "end": round(float(slot["end"]), 3),
+                "alternatives": alt_list,
+                "omission_note": "Only alternatives generated by configured contextual passes are included; this is not exhaustive.",
+            }
+        )
+    return output
+
+
+def agreement_summary(contextual: list[dict[str, Any]]) -> dict[str, Any]:
+    texts = [item["text"].lower().strip() for item in contextual if item["text"].strip()]
+    if not texts:
+        return {"band": "none", "mean_pairwise_similarity": 0.0, "exact_text_groups": 0}
+    pairwise = [
+        difflib.SequenceMatcher(None, first, second).ratio()
+        for index, first in enumerate(texts)
+        for second in texts[index + 1 :]
+    ]
+    mean = 1.0 if len(texts) == 1 else sum(pairwise) / max(len(pairwise), 1)
+    band = "strong textual agreement" if mean >= 0.85 else "mixed textual agreement" if mean >= 0.6 else "substantial disagreement"
+    return {
+        "band": band,
+        "mean_pairwise_similarity": round(mean, 6),
+        "exact_text_groups": len(set(texts)),
+        "hypothesis_count": len(texts),
+        "note": "Agreement is similarity among configured model outputs, not confirmation that the words were spoken.",
+    }
+
+
+def log_add(*values: float) -> float:
+    finite = [value for value in values if not math.isinf(value)]
+    if not finite:
+        return -math.inf
+    maximum = max(finite)
+    return maximum + math.log(sum(math.exp(value - maximum) for value in finite))
+
+
+def ctc_prefix_beam_search(
+    log_probs: np.ndarray,
+    blank_id: int,
+    beam_width: int,
+    token_top_k: int,
+    nbest: int,
+) -> list[tuple[tuple[int, ...], float]]:
+    beams: dict[tuple[int, ...], tuple[float, float]] = {(): (0.0, -math.inf)}
+    for frame in log_probs:
+        count = min(token_top_k, frame.shape[0])
+        top_ids = np.argpartition(frame, -count)[-count:]
+        if blank_id not in top_ids:
+            top_ids = np.append(top_ids, blank_id)
+        next_beams: dict[tuple[int, ...], list[float]] = defaultdict(lambda: [-math.inf, -math.inf])
+        for prefix, (prob_blank, prob_nonblank) in beams.items():
+            for token_raw in top_ids:
+                token_id = int(token_raw)
+                token_logprob = float(frame[token_id])
+                if token_id == blank_id:
+                    next_beams[prefix][0] = log_add(
+                        next_beams[prefix][0],
+                        prob_blank + token_logprob,
+                        prob_nonblank + token_logprob,
+                    )
+                    continue
+                last = prefix[-1] if prefix else None
+                if token_id == last:
+                    next_beams[prefix][1] = log_add(next_beams[prefix][1], prob_nonblank + token_logprob)
+                    extended = prefix + (token_id,)
+                    next_beams[extended][1] = log_add(next_beams[extended][1], prob_blank + token_logprob)
+                else:
+                    extended = prefix + (token_id,)
+                    next_beams[extended][1] = log_add(
+                        next_beams[extended][1],
+                        log_add(prob_blank, prob_nonblank) + token_logprob,
+                    )
+        ranked = sorted(
+            next_beams.items(),
+            key=lambda item: log_add(item[1][0], item[1][1]),
+            reverse=True,
+        )[:beam_width]
+        beams = {prefix: (scores[0], scores[1]) for prefix, scores in ranked}
+    return sorted(
+        ((prefix, log_add(pb, pnb)) for prefix, (pb, pnb) in beams.items()),
+        key=lambda item: item[1],
+        reverse=True,
+    )[:nbest]
+
+
+def phoneme_hypotheses_for_interval(
+    *,
+    samples: np.ndarray,
+    sample_rate: int,
+    start: float,
+    end: float,
+    processor: Any,
+    model: Any,
+    torch_device: str,
+    beam_width: int,
+    top_k: int,
+    nbest: int,
+) -> dict[str, Any]:
+    start_index = max(0, int(math.floor(start * sample_rate)))
+    end_index = min(len(samples), int(math.ceil(end * sample_rate)))
+    clip = samples[start_index:end_index]
+    if clip.size < int(0.08 * sample_rate):
+        return {"hypotheses": [], "diagnostics": {"reason": "interval_too_short"}}
+    inputs = processor(clip, sampling_rate=sample_rate, return_tensors="pt", padding=True)
+    input_values = inputs.input_values.to(torch_device)
+    attention_mask = getattr(inputs, "attention_mask", None)
+    if attention_mask is not None:
+        attention_mask = attention_mask.to(torch_device)
+    with torch.inference_mode():
+        logits = model(input_values, attention_mask=attention_mask).logits[0]
+        probabilities = torch.softmax(logits, dim=-1)
+        log_probabilities = torch.log_softmax(logits, dim=-1)
+    mean_top1 = float(probabilities.max(dim=-1).values.mean().cpu())
+    entropy = -(probabilities * torch.log(probabilities.clamp_min(1e-12))).sum(dim=-1)
+    log_probs_np = log_probabilities.detach().cpu().numpy()
+    blank_id = processor.tokenizer.pad_token_id
+    sequences = ctc_prefix_beam_search(log_probs_np, blank_id, beam_width, top_k, nbest)
+    best_score = sequences[0][1] if sequences else 0.0
+    decoded, seen = [], set()
+    for token_ids, score in sequences:
+        special_ids = set(processor.tokenizer.all_special_ids)
+        filtered_token_ids = [
+            int(token_id)
+            for token_id in token_ids
+            if int(token_id) != blank_id
+            and int(token_id) not in special_ids
+        ]
+
+        if not filtered_token_ids:
+            # blank_or_special_only: valid CTC output for weak/non-speech audio
+            continue
+
+        try:
+            text = clean_text(
+                processor.tokenizer.decode(
+                    filtered_token_ids,
+                    skip_special_tokens=True,
+                )
+            )
+        except (TypeError, ValueError):
+            # Expose emitted tokens rather than crashing or inventing text.
+            raw_tokens = processor.tokenizer.convert_ids_to_tokens(
+                filtered_token_ids
+            )
+            text = clean_text(
+                " ".join(str(token) for token in raw_tokens if token)
+            )
+
+        if not text:
+            continue
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        decoded.append(
+            {
+                "rank": len(decoded) + 1,
+                "phonemes": text,
+                "relative_log_score": round(float(score - best_score), 6),
+                "token_ids": list(token_ids),
+            }
+        )
+    return {
+        "hypotheses": decoded,
+        "diagnostics": {
+            "mean_frame_top1_posterior_uncalibrated": round(mean_top1, 6),
+            "mean_frame_entropy_nats": round(float(entropy.mean().cpu()), 6),
+            "frames": int(log_probs_np.shape[0]),
+            "vocabulary_size": int(log_probs_np.shape[1]),
+            "beam_width": beam_width,
+            "top_tokens_per_frame": top_k,
+            "note": "Frame posterior and entropy values are diagnostics, not probabilities that a word or phrase was spoken.",
+        },
+    }
+
+
+def main() -> int:
+    args = parse_args()
+    for attribute in ("source", "output", "work_dir", "model_cache"):
+        setattr(args, attribute, getattr(args, attribute).resolve())
+    if not args.source.is_file():
+        raise FileNotFoundError(args.source)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.work_dir.mkdir(parents=True, exist_ok=True)
+    args.model_cache.mkdir(parents=True, exist_ok=True)
+
+    channel2_path = args.work_dir / "channel-2-16khz-pcm.wav"
+    extraction_command = extract_channel_2(args.source, channel2_path)
+    source_hash = sha256_file(args.source)
+    channel2_hash = sha256_file(channel2_path)
+    samples, sample_rate = sf.read(channel2_path, dtype="float32", always_2d=False)
+    if samples.ndim == 2:
+        samples = samples[:, 0]
+    if sample_rate != 16000:
+        raise RuntimeError(f"Expected 16 kHz audio, got {sample_rate}")
+
+    whisper_device, whisper_compute, torch_device = choose_devices(args.device)
+    hash_files = not args.skip_model_file_hashes
+    contextual_runs: list[dict[str, Any]] = []
+    model_metadata: list[dict[str, Any]] = []
+
+    primary_runs, primary_meta = run_whisper_passes(
+        model_label="primary",
+        model_name=args.primary_model,
+        audio_path=channel2_path,
+        cache_dir=args.model_cache / "faster-whisper",
+        device=whisper_device,
+        compute_type=whisper_compute,
+        language=args.language,
+        hash_files=hash_files,
+    )
+    contextual_runs.extend(primary_runs)
+    model_metadata.append(primary_meta)
+
+    if not args.skip_secondary:
+        secondary_runs, secondary_meta = run_whisper_passes(
+            model_label="secondary",
+            model_name=args.secondary_model,
+            audio_path=channel2_path,
+            cache_dir=args.model_cache / "faster-whisper",
+            device=whisper_device,
+            compute_type=whisper_compute,
+            language=args.language,
+            hash_files=hash_files,
+        )
+        contextual_runs.extend(secondary_runs)
+        model_metadata.append(secondary_meta)
+
+    print(f"\nResolving phoneme model: {args.phoneme_model}", flush=True)
+    phoneme_path = Path(
+        snapshot_download(repo_id=args.phoneme_model, cache_dir=str(args.model_cache / "huggingface"))
+    )
+    processor = AutoProcessor.from_pretrained(str(phoneme_path), do_phonemize=False)
+    phoneme_model = Wav2Vec2ForCTC.from_pretrained(str(phoneme_path)).to(torch_device)
+    phoneme_model.eval()
+    model_metadata.append(
+        {
+            "role": "phoneme_ctc",
+            "model_name": args.phoneme_model,
+            "resolved_revision": model_revision_from_snapshot(phoneme_path),
+            "local_model_tree_sha256": None if not hash_files else hash_model_tree(phoneme_path),
+            "device": torch_device,
+            "family_note": "Independent Wav2Vec2 CTC phoneme recognizer. Phoneme strings are model hypotheses, not word probabilities.",
+        }
+    )
+
+    intervals = build_intervals(contextual_runs, args.merge_gap_seconds, args.max_segment_seconds)
+    output_segments = []
+    for index, interval in enumerate(intervals, start=1):
+        start, end = interval["start"], interval["end"]
+        print(f"\nAnalyzing interval {index}/{len(intervals)}: {start:.3f}-{end:.3f}", flush=True)
+        raw = [
+            hypothesis
+            for run_record in contextual_runs
+            if (hypothesis := hypothesis_for_interval(run_record, start, end)) is not None
+        ]
+        contextual = deduplicate_hypotheses(raw)
+        phoneme = phoneme_hypotheses_for_interval(
+            samples=np.asarray(samples, dtype=np.float32),
+            sample_rate=sample_rate,
+            start=start,
+            end=end,
+            processor=processor,
+            model=phoneme_model,
+            torch_device=torch_device,
+            beam_width=args.phoneme_beam_width,
+            top_k=args.phoneme_top_k,
+            nbest=args.phoneme_nbest,
+        )
+        output_segments.append(
+            {
+                "segment_id": f"segment-{index:04d}",
+                "start": start,
+                "end": end,
+                "duration": round(end - start, 3),
+                "speech_status": "model-selected candidate interval; not verified speech",
+                "contextual_hypotheses": contextual,
+                "word_alternative_slots": align_word_alternatives(raw),
+                "phoneme_hypotheses": phoneme["hypotheses"],
+                "phoneme_diagnostics": phoneme["diagnostics"],
+                "agreement": agreement_summary(contextual),
+            }
+        )
+
+    result = {
+        "schema": SCHEMA,
+        "generated_at_utc": utc_now(),
+        "status": "experimental machine-generated hypotheses; not a verified transcript",
+        "warnings": WARNINGS,
+        "source": {
+            "file_name": args.source.name,
+            "bytes": args.source.stat().st_size,
+            "sha256": source_hash,
+            "provenance": "YouTube-derived public working source; not represented as the native MDMR recording.",
+        },
+        "channel_extraction": {
+            "channel": 2,
+            "interpretation": "second/right channel",
+            "sample_rate_hz": sample_rate,
+            "encoding": "PCM signed 16-bit WAV",
+            "sha256": channel2_hash,
+            "ffmpeg_command": [Path(part).name if index == 0 else part for index, part in enumerate(extraction_command)],
+            "filter": "pan=mono|c0=c1",
+        },
+        "configuration": {
+            "language": args.language,
+            "primary_contextual_model": args.primary_model,
+            "secondary_contextual_model": None if args.skip_secondary else args.secondary_model,
+            "phoneme_model": args.phoneme_model,
+            "merge_gap_seconds": args.merge_gap_seconds,
+            "maximum_interval_seconds": args.max_segment_seconds,
+            "phoneme_beam_width": args.phoneme_beam_width,
+            "phoneme_top_tokens_per_frame": args.phoneme_top_k,
+            "phoneme_nbest": args.phoneme_nbest,
+            "candidate_phrase_prompting": False,
+            "initial_prompt": None,
+            "hotwords": None,
+            "browser_filters_used_for_inference": False,
+        },
+        "environment": {
+            "python": sys.version,
+            "platform": platform.platform(),
+            "processor": platform.processor(),
+            "packages": package_versions(
+                ["faster-whisper", "ctranslate2", "huggingface-hub", "numpy", "soundfile", "torch", "transformers", "safetensors"]
+            ),
+            "whisper_device": whisper_device,
+            "whisper_compute_type": whisper_compute,
+            "phoneme_device": torch_device,
+        },
+        "models": model_metadata,
+        "contextual_runs": contextual_runs,
+        "segments": output_segments,
+        "limitations": {
+            "alternative_scope": "Word alternatives include only outputs generated by configured contextual passes. They are not exhaustive.",
+            "architecture_independence": "Primary and secondary contextual models are both Whisper-family systems. The phoneme model is a separate CTC architecture.",
+            "score_interpretation": "Word probability, average log probability, no-speech probability, CTC relative log score, and cross-run agreement are distinct quantities and are not merged into one truth-confidence percentage.",
+        },
+    }
+
+    temporary = args.output.with_suffix(args.output.suffix + ".tmp")
+    temporary.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(args.output)
+    print(f"\nWrote {args.output}", flush=True)
+    print(f"Segments: {len(output_segments)}", flush=True)
+    print(f"Source SHA-256: {source_hash}", flush=True)
+    print(f"Channel 2 SHA-256: {channel2_hash}", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

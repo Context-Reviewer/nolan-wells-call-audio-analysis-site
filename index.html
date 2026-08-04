@@ -623,6 +623,77 @@
     </p>
 </section>
 
+<!-- machine-hypotheses-v1 -->
+<section class="container section hypothesis-section" id="machine-hypotheses">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Experimental model output</p>
+            <h2>Machine-generated phonetic hypotheses</h2>
+        </div>
+        <span class="status uncertain">Not a verified transcript</span>
+    </div>
+
+    <div class="notice hypothesis-warning">
+        These are experimental machine-generated phonetic and word hypotheses—not
+        verified quotations, factual probabilities, or a certified forensic
+        transcript. Contextual recognizers can produce plausible language that
+        the audio does not support. Every candidate must be checked against raw
+        Channel 2 with processing bypassed.
+    </div>
+
+    <div class="hypothesis-principles">
+        <div>
+            <strong>No candidate phrase prompting</strong>
+            <span>No name, phrase, hotword list, initial prompt, or expected sentence is supplied to the blind generation pass.</span>
+        </div>
+        <div>
+            <strong>Scores remain separate</strong>
+            <span>Acoustic, contextual, no-speech, and cross-run agreement values are not merged into a false “truth percentage.”</span>
+        </div>
+        <div>
+            <strong>Alternatives are finite</strong>
+            <span>Displayed choices are only those produced by the configured models and settings. They are not exhaustive.</span>
+        </div>
+    </div>
+
+    <div class="hypothesis-toolbar">
+        <label>
+            Search generated text or phonemes
+            <input id="hypothesis-search" type="search" placeholder="Search without changing model output" disabled>
+        </label>
+
+        <label>
+            Display
+            <select id="hypothesis-display-filter" disabled>
+                <option value="all">All model-selected intervals</option>
+                <option value="disagreement">Substantial disagreement</option>
+                <option value="mixed">Mixed or disputed</option>
+                <option value="agreement">Stronger textual agreement</option>
+            </select>
+        </label>
+
+        <label class="checkbox-control hypothesis-checkbox">
+            <input id="show-word-slots" type="checkbox" checked disabled>
+            Show word alternatives
+        </label>
+
+        <button id="expand-all-hypotheses" type="button" disabled>Expand all</button>
+        <button id="collapse-all-hypotheses" type="button" disabled>Collapse all</button>
+    </div>
+
+    <div id="hypothesis-load-status" class="hypothesis-load-status">
+        Looking for the static hypothesis package…
+    </div>
+
+    <div id="hypothesis-run-summary" hidden></div>
+    <div id="hypothesis-segments" class="hypothesis-segments"></div>
+
+    <details id="hypothesis-provenance" class="hypothesis-provenance" hidden>
+        <summary>Complete generation provenance and limitations</summary>
+        <pre id="hypothesis-provenance-json"></pre>
+    </details>
+</section>
+
 <section class="container section">
     <h2>Summary</h2>
     <div class="cards">
