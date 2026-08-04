@@ -3485,3 +3485,1607 @@ if (document.readyState === "loading") {
 else {
     initializeSelectionSpectrogram();
 }
+
+// synthetic-reconstruction-tab-v1
+
+function initializeSyntheticReconstructionTab(attempt = 0) {
+    if (document.getElementById("synthetic-reconstruction-panel")) {
+        return;
+    }
+
+    const workspace = document.querySelector(
+        "#full-recording .lab-workspace"
+    );
+    const tabList = workspace?.querySelector(".lab-tab-list");
+
+    if (!workspace || !tabList) {
+        if (attempt < 50) {
+            window.setTimeout(
+                () => initializeSyntheticReconstructionTab(attempt + 1),
+                100
+            );
+        }
+        return;
+    }
+
+    const tabButton = document.createElement("button");
+    tabButton.className =
+        "lab-tab-button synthetic-reconstruction-tab-button";
+    tabButton.type = "button";
+    tabButton.setAttribute("role", "tab");
+    tabButton.setAttribute(
+        "aria-controls",
+        "synthetic-reconstruction-panel"
+    );
+    tabButton.setAttribute("aria-selected", "false");
+    tabButton.textContent = "Synthetic reconstruction";
+
+    const panel = document.createElement("div");
+    panel.id = "synthetic-reconstruction-panel";
+    panel.className =
+        "lab-tab-panel synthetic-reconstruction-lab-panel";
+    panel.setAttribute("role", "tabpanel");
+    panel.hidden = true;
+
+    panel.innerHTML = `
+        <section class="forensic-panel synthetic-reconstruction-card">
+            <div class="forensic-panel-heading">
+                <div>
+                    <p class="eyebrow">Model-generated interpretation</p>
+                    <h3>Synthetic reconstruction — not evidence</h3>
+                </div>
+                <output
+                    id="synthetic-reconstruction-state"
+                    class="processing-state"
+                >
+                    Looking for result package
+                </output>
+            </div>
+
+            <div class="notice synthetic-reconstruction-warning">
+                Recognition models are being asked to supply plausible complete
+                wording for ambiguous speech. Generated words may be wrong or
+                absent from the source. They are not restored audio, verified
+                quotations, or forensic conclusions.
+            </div>
+
+            <div class="synthetic-request-grid">
+                <label>
+                    Start
+                    <input
+                        id="synthetic-request-start"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value="0"
+                    >
+                </label>
+
+                <label>
+                    End
+                    <input
+                        id="synthetic-request-end"
+                        type="number"
+                        min="0.05"
+                        step="0.01"
+                        value="18"
+                    >
+                </label>
+
+                <label>
+                    Context padding
+                    <input
+                        id="synthetic-request-padding"
+                        type="number"
+                        min="0"
+                        max="10"
+                        step="0.25"
+                        value="2"
+                    >
+                </label>
+
+                <button id="synthetic-use-selection" type="button">
+                    Use waveform selection
+                </button>
+
+                <button id="synthetic-first-18" type="button">
+                    Use first 18 seconds
+                </button>
+            </div>
+
+            <div class="synthetic-request-actions">
+                <button id="synthetic-copy-command" type="button">
+                    Copy full local-analysis command
+                </button>
+
+                <button id="synthetic-copy-quick-command" type="button">
+                    Copy quick-test command
+                </button>
+
+                <button id="synthetic-download-request" type="button">
+                    Download request JSON
+                </button>
+
+                <button id="synthetic-reload-results" type="button">
+                    Reload generated results
+                </button>
+            </div>
+
+            <p
+                id="synthetic-command-status"
+                class="muted compact-note"
+            >
+                GitHub Pages cannot run the local models. Copy a command,
+                run it in PowerShell, then reload this tab.
+            </p>
+
+            <div
+                id="synthetic-result-status"
+                class="synthetic-result-status"
+            >
+                No result package has been loaded.
+            </div>
+
+            <div
+                id="synthetic-audio-comparisons"
+                class="synthetic-audio-comparisons"
+                hidden
+            ></div>
+
+            <div
+                id="synthetic-candidates"
+                class="synthetic-candidates"
+            ></div>
+
+            <details
+                id="synthetic-provenance"
+                class="synthetic-provenance"
+                hidden
+            >
+                <summary>
+                    Models, decoding passes, hashes, and complete provenance
+                </summary>
+                <pre id="synthetic-provenance-json"></pre>
+            </details>
+        </section>
+    `;
+
+    workspace.append(panel);
+    tabList.append(tabButton);
+
+    const state = document.getElementById(
+        "synthetic-reconstruction-state"
+    );
+    const requestStart = document.getElementById(
+        "synthetic-request-start"
+    );
+    const requestEnd = document.getElementById(
+        "synthetic-request-end"
+    );
+    const requestPadding = document.getElementById(
+        "synthetic-request-padding"
+    );
+    const useSelection = document.getElementById(
+        "synthetic-use-selection"
+    );
+    const first18 = document.getElementById(
+        "synthetic-first-18"
+    );
+    const copyCommand = document.getElementById(
+        "synthetic-copy-command"
+    );
+    const copyQuickCommand = document.getElementById(
+        "synthetic-copy-quick-command"
+    );
+    const downloadRequest = document.getElementById(
+        "synthetic-download-request"
+    );
+    const reloadResults = document.getElementById(
+        "synthetic-reload-results"
+    );
+    const commandStatus = document.getElementById(
+        "synthetic-command-status"
+    );
+    const resultStatus = document.getElementById(
+        "synthetic-result-status"
+    );
+    const audioComparisons = document.getElementById(
+        "synthetic-audio-comparisons"
+    );
+    const candidatesContainer = document.getElementById(
+        "synthetic-candidates"
+    );
+    const provenance = document.getElementById(
+        "synthetic-provenance"
+    );
+    const provenanceJson = document.getElementById(
+        "synthetic-provenance-json"
+    );
+
+    let packageData = null;
+
+    function showTab() {
+        workspace
+            .querySelectorAll(".lab-tab-panel")
+            .forEach((otherPanel) => {
+                otherPanel.hidden = true;
+            });
+
+        tabList
+            .querySelectorAll(".lab-tab-button")
+            .forEach((otherButton) => {
+                otherButton.classList.remove("active");
+                otherButton.setAttribute("aria-selected", "false");
+            });
+
+        panel.hidden = false;
+        tabButton.classList.add("active");
+        tabButton.setAttribute("aria-selected", "true");
+    }
+
+    tabButton.addEventListener("click", showTab);
+
+    function requestValues() {
+        let start = Number(requestStart.value);
+        let end = Number(requestEnd.value);
+        let padding = Number(requestPadding.value);
+
+        start = Number.isFinite(start) ? Math.max(0, start) : 0;
+        end = Number.isFinite(end)
+            ? Math.max(start + 0.05, end)
+            : start + 18;
+        padding = Number.isFinite(padding)
+            ? Math.min(Math.max(padding, 0), 10)
+            : 2;
+
+        requestStart.value = start.toFixed(2);
+        requestEnd.value = end.toFixed(2);
+        requestPadding.value = padding.toFixed(2);
+
+        return { start, end, padding };
+    }
+
+    function runnerPath() {
+        return (
+            "C:\\dev\\Nolan_Wells\\" +
+            "nolan-wells-call-audio-analysis-site\\" +
+            "tools\\synthetic-reconstruction\\" +
+            "RUN-SYNTHETIC-RECONSTRUCTION.ps1"
+        );
+    }
+
+    function buildCommand(quick) {
+        const request = requestValues();
+        return (
+            `& "${runnerPath()}" ` +
+            `-Start ${request.start.toFixed(2)} ` +
+            `-End ${request.end.toFixed(2)} ` +
+            `-ContextPadding ${request.padding.toFixed(2)}` +
+            `${quick ? " -Quick" : ""} ` +
+            "-SkipModelFileHashes -Preview"
+        );
+    }
+
+    async function copyText(text, confirmation) {
+        try {
+            await navigator.clipboard.writeText(text);
+        }
+        catch {
+            const area = document.createElement("textarea");
+            area.value = text;
+            document.body.append(area);
+            area.select();
+            document.execCommand("copy");
+            area.remove();
+        }
+
+        commandStatus.textContent = confirmation;
+    }
+
+    useSelection.addEventListener("click", () => {
+        if (!activeRegion) {
+            commandStatus.textContent =
+                "Create a waveform selection first.";
+            return;
+        }
+
+        requestStart.value = activeRegion.start.toFixed(2);
+        requestEnd.value = activeRegion.end.toFixed(2);
+        commandStatus.textContent =
+            "Waveform boundaries copied into the request.";
+    });
+
+    first18.addEventListener("click", () => {
+        requestStart.value = "0.00";
+        requestEnd.value = "18.00";
+        createSelection(0, 18, true);
+        commandStatus.textContent =
+            "The first 18 seconds are selected.";
+    });
+
+    copyCommand.addEventListener("click", () => {
+        copyText(
+            buildCommand(false),
+            "Full local-analysis command copied."
+        );
+    });
+
+    copyQuickCommand.addEventListener("click", () => {
+        copyText(
+            buildCommand(true),
+            "Quick-test command copied."
+        );
+    });
+
+    downloadRequest.addEventListener("click", () => {
+        const request = requestValues();
+        const content = {
+            schema: "synthetic_reconstruction_request_v1",
+            start: request.start,
+            end: request.end,
+            context_padding: request.padding,
+            channel: 2,
+            status: "Request only; no recognition has been performed."
+        };
+
+        const blob = new Blob(
+            [JSON.stringify(content, null, 2) + "\n"],
+            { type: "application/json" }
+        );
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download =
+            `synthetic-reconstruction-request-` +
+            `${request.start.toFixed(2)}-` +
+            `${request.end.toFixed(2)}.json`;
+        link.click();
+
+        window.setTimeout(() => {
+            URL.revokeObjectURL(link.href);
+        }, 1000);
+    });
+
+    function element(tag, options = {}) {
+        const result = document.createElement(tag);
+
+        if (options.className) {
+            result.className = options.className;
+        }
+        if (options.text !== undefined) {
+            result.textContent = String(options.text);
+        }
+        if (options.type) {
+            result.type = options.type;
+        }
+
+        return result;
+    }
+
+    function speakCandidate(candidate) {
+        if (!("speechSynthesis" in window)) {
+            commandStatus.textContent =
+                "This browser does not provide speech synthesis.";
+            return;
+        }
+
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(
+            `Synthetic alternative ${candidate.alternative_id}. ` +
+            candidate.text
+        );
+        utterance.rate = 0.88;
+        utterance.pitch = 1;
+        utterance.volume = 0.95;
+
+        const englishVoice = window.speechSynthesis
+            .getVoices()
+            .find((voice) => /^en[-_]/i.test(voice.lang));
+
+        if (englishVoice) {
+            utterance.voice = englishVoice;
+        }
+
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function renderAudio(data) {
+        audioComparisons.textContent = "";
+
+        Object.entries(data.variants).forEach(
+            ([variantName, variant]) => {
+                const card = element("div", {
+                    className: "synthetic-audio-card"
+                });
+                const heading = element("strong", {
+                    text: variantName.replaceAll("_", " ")
+                });
+                const description = element("span", {
+                    text: variant.description
+                });
+                const audio = document.createElement("audio");
+
+                audio.controls = true;
+                audio.preload = "metadata";
+                audio.src = `./${variant.public_audio_path}`;
+
+                card.append(heading, description, audio);
+                audioComparisons.append(card);
+            }
+        );
+
+        audioComparisons.hidden = false;
+    }
+
+    function renderCandidate(candidate) {
+        const card = element("article", {
+            className: "synthetic-candidate-card"
+        });
+
+        const header = element("div", {
+            className: "synthetic-candidate-header"
+        });
+        header.append(
+            element("span", {
+                className: "synthetic-candidate-rank",
+                text: `Alternative ${candidate.alternative_id}`
+            }),
+            element("span", {
+                className: "synthetic-support-label",
+                text: candidate.support_label
+            })
+        );
+
+        const text = element("p", {
+            className: "synthetic-candidate-text",
+            text: candidate.text
+        });
+
+        const stats = element("div", {
+            className: "synthetic-candidate-stats"
+        });
+
+        [
+            ["Outputs", candidate.supporting_outputs],
+            ["Raw acoustic", candidate.raw_acoustic_output_count],
+            [
+                "Acoustic / contextual",
+                `${candidate.acoustic_output_count} / ` +
+                `${candidate.contextual_output_count}`
+            ],
+            ["Models", candidate.supporting_models.join(", ")],
+            ["Variants", candidate.supporting_variants.join(", ")],
+            [
+                "Best avg log score",
+                candidate.best_avg_logprob.toFixed(3)
+            ]
+        ].forEach(([label, value]) => {
+            const item = element("div");
+            item.append(
+                element("strong", { text: label }),
+                element("span", { text: value })
+            );
+            stats.append(item);
+        });
+
+        const actions = element("div", {
+            className: "synthetic-candidate-actions"
+        });
+        const speak = element("button", {
+            type: "button",
+            text: "Speak synthetic alternative"
+        });
+        const stop = element("button", {
+            type: "button",
+            text: "Stop synthetic speech"
+        });
+        const openRaw = element("button", {
+            type: "button",
+            text: "Open source selection"
+        });
+
+        speak.addEventListener("click", () => {
+            speakCandidate(candidate);
+        });
+
+        stop.addEventListener("click", () => {
+            window.speechSynthesis?.cancel();
+        });
+
+        openRaw.addEventListener("click", () => {
+            createSelection(
+                packageData.selection.start,
+                packageData.selection.end,
+                true
+            );
+
+            Array.from(
+                tabList.querySelectorAll(".lab-tab-button")
+            )
+                .find((button) => /listen/i.test(button.textContent))
+                ?.click();
+        });
+
+        actions.append(speak, stop, openRaw);
+
+        const sources = document.createElement("details");
+        sources.className = "synthetic-candidate-sources";
+        const sourceSummary = document.createElement("summary");
+        sourceSummary.textContent =
+            "Show model-source disagreement";
+        const sourceList = document.createElement("ul");
+
+        candidate.sources.forEach((source) => {
+            const item = document.createElement("li");
+            item.append(
+                element("strong", {
+                    text:
+                        `${source.model_name} · ${source.variant} · ` +
+                        `${source.pass_id}`
+                }),
+                element("span", {
+                    text:
+                        `${source.lane}; avg log score ` +
+                        `${source.avg_logprob.toFixed(3)}; ` +
+                        `no-speech ${source.no_speech_prob.toFixed(3)}`
+                }),
+                element("blockquote", { text: source.text })
+            );
+            sourceList.append(item);
+        });
+
+        sources.append(sourceSummary, sourceList);
+        card.append(header, text, stats, actions, sources);
+        return card;
+    }
+
+    async function loadResults() {
+        state.textContent = "Loading result package";
+        resultStatus.textContent =
+            "Checking assets/data/synthetic-reconstruction.json…";
+        candidatesContainer.textContent = "";
+        audioComparisons.hidden = true;
+        provenance.hidden = true;
+
+        try {
+            const response = await fetch(
+                "./assets/data/synthetic-reconstruction.json" +
+                `?cache=${Date.now()}`,
+                { cache: "no-store" }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    `HTTP ${response.status}; run the local analysis first.`
+                );
+            }
+
+            const data = await response.json();
+
+            if (
+                data.schema !==
+                "experimental_synthetic_reconstruction_v1"
+            ) {
+                throw new Error(
+                    `Unexpected schema: ${data.schema}`
+                );
+            }
+
+            packageData = data;
+            state.textContent = "Results loaded";
+            requestStart.value = data.selection.start.toFixed(2);
+            requestEnd.value = data.selection.end.toFixed(2);
+            requestPadding.value =
+                data.selection.context_padding_requested.toFixed(2);
+
+            resultStatus.textContent =
+                `${data.candidates.length} synthetic alternative(s) ` +
+                `for ${formatTime(data.selection.start)}–` +
+                `${formatTime(data.selection.end)}. ` +
+                "None is a verified quotation.";
+
+            renderAudio(data);
+
+            data.candidates.forEach((candidate) => {
+                candidatesContainer.append(
+                    renderCandidate(candidate)
+                );
+            });
+
+            if (!data.candidates.length) {
+                candidatesContainer.append(
+                    element("div", {
+                        className: "synthetic-empty",
+                        text:
+                            "No textual candidate survived grouping. " +
+                            "The passage may be too weak or non-speech."
+                    })
+                );
+            }
+
+            provenance.hidden = false;
+            provenanceJson.textContent = JSON.stringify(
+                {
+                    schema: data.schema,
+                    generated_at_utc: data.generated_at_utc,
+                    status: data.status,
+                    warnings: data.warnings,
+                    source: data.source,
+                    selection: data.selection,
+                    configuration: data.configuration,
+                    variants: data.variants,
+                    models: data.models,
+                    environment: data.environment,
+                    interpretation_rules: data.interpretation_rules
+                },
+                null,
+                2
+            );
+        }
+        catch (error) {
+            packageData = null;
+            state.textContent = "No generated package";
+            resultStatus.textContent =
+                "Synthetic reconstruction results are unavailable: " +
+                error.message;
+        }
+    }
+
+    reloadResults.addEventListener("click", loadResults);
+    loadResults();
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener(
+        "DOMContentLoaded",
+        () => initializeSyntheticReconstructionTab(),
+        { once: true }
+    );
+}
+else {
+    initializeSyntheticReconstructionTab();
+}
+
+
+// synthetic-background-chatter-ui-v1
+
+function initializeSyntheticBackgroundChatter(attempt = 0) {
+    if (document.getElementById("synthetic-background-chatter")) {
+        return;
+    }
+
+    const syntheticPanel = document.getElementById(
+        "synthetic-reconstruction-panel"
+    );
+
+    if (!syntheticPanel) {
+        if (attempt < 60) {
+            window.setTimeout(
+                () => initializeSyntheticBackgroundChatter(
+                    attempt + 1
+                ),
+                100
+            );
+        }
+        return;
+    }
+
+    const host = syntheticPanel.querySelector(
+        ".synthetic-reconstruction-card"
+    );
+
+    if (!host) {
+        return;
+    }
+
+    const section = document.createElement("section");
+    section.id = "synthetic-background-chatter";
+    section.className = "synthetic-background-chatter";
+
+    section.innerHTML = `
+        <div class="synthetic-background-heading">
+            <div>
+                <p class="eyebrow">
+                    High-sensitivity short-window scan
+                </p>
+                <h3>Background-chatter reconstruction</h3>
+            </div>
+            <button
+                id="reload-synthetic-background"
+                type="button"
+            >
+                Reload background results
+            </button>
+        </div>
+
+        <div class="notice synthetic-background-warning">
+            This lane deliberately favors sensitivity. Single-output
+            candidates are especially prone to hallucination. Repetition
+            across windows, variants, or models means the output is more
+            reproducible—not necessarily true.
+        </div>
+
+        <div
+            id="synthetic-background-status"
+            class="synthetic-result-status"
+        >
+            Looking for background-chatter results…
+        </div>
+
+        <div
+            id="synthetic-background-audio"
+            class="synthetic-audio-comparisons"
+            hidden
+        ></div>
+
+        <div class="synthetic-background-toolbar">
+            <label>
+                Minimum recurrence
+                <select id="synthetic-background-support-filter">
+                    <option value="1">Show all candidates</option>
+                    <option value="2" selected>
+                        At least 2 supporting outputs
+                    </option>
+                    <option value="3">
+                        At least 3 supporting outputs
+                    </option>
+                    <option value="5">
+                        At least 5 supporting outputs
+                    </option>
+                </select>
+            </label>
+
+            <label>
+                Search wording
+                <input
+                    id="synthetic-background-search"
+                    type="search"
+                    placeholder="Filter candidates"
+                >
+            </label>
+        </div>
+
+        <div
+            id="synthetic-background-candidates"
+            class="synthetic-background-candidates"
+        ></div>
+
+        <details
+            id="synthetic-background-provenance"
+            class="synthetic-provenance"
+            hidden
+        >
+            <summary>
+                Background-scan configuration and provenance
+            </summary>
+            <pre id="synthetic-background-provenance-json"></pre>
+        </details>
+    `;
+
+    const provenance = host.querySelector(
+        "#synthetic-provenance"
+    );
+
+    if (provenance) {
+        provenance.insertAdjacentElement(
+            "beforebegin",
+            section
+        );
+    }
+    else {
+        host.append(section);
+    }
+
+    const reloadButton = document.getElementById(
+        "reload-synthetic-background"
+    );
+    const status = document.getElementById(
+        "synthetic-background-status"
+    );
+    const audioContainer = document.getElementById(
+        "synthetic-background-audio"
+    );
+    const candidatesContainer = document.getElementById(
+        "synthetic-background-candidates"
+    );
+    const supportFilter = document.getElementById(
+        "synthetic-background-support-filter"
+    );
+    const search = document.getElementById(
+        "synthetic-background-search"
+    );
+    const provenancePanel = document.getElementById(
+        "synthetic-background-provenance"
+    );
+    const provenanceJson = document.getElementById(
+        "synthetic-background-provenance-json"
+    );
+
+    let dataPackage = null;
+
+    function formatCandidateTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainder = seconds - minutes * 60;
+
+        return (
+            `${String(minutes).padStart(2, "0")}:` +
+            `${remainder.toFixed(2).padStart(5, "0")}`
+        );
+    }
+
+    function speak(text) {
+        if (!("speechSynthesis" in window)) {
+            return;
+        }
+
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(
+            `Synthetic background candidate. ${text}`
+        );
+        utterance.rate = 0.86;
+        utterance.pitch = 1;
+        utterance.volume = 0.95;
+
+        const voice = window.speechSynthesis
+            .getVoices()
+            .find((item) => /^en[-_]/i.test(item.lang));
+
+        if (voice) {
+            utterance.voice = voice;
+        }
+
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function renderAudio() {
+        audioContainer.textContent = "";
+
+        Object.entries(dataPackage.variants).forEach(
+            ([name, variant]) => {
+                const card = document.createElement("div");
+                card.className = "synthetic-audio-card";
+
+                const strong = document.createElement("strong");
+                strong.textContent = name.replaceAll("_", " ");
+
+                const description = document.createElement("span");
+                description.textContent = variant.description;
+
+                const audio = document.createElement("audio");
+                audio.controls = true;
+                audio.preload = "metadata";
+                audio.src = `./${variant.public_audio_path}`;
+
+                card.append(strong, description, audio);
+                audioContainer.append(card);
+            }
+        );
+
+        audioContainer.hidden = false;
+    }
+
+    function renderCandidates() {
+        candidatesContainer.textContent = "";
+
+        if (!dataPackage) {
+            return;
+        }
+
+        const minimumSupport = Number(supportFilter.value);
+        const query = search.value.trim().toLowerCase();
+
+        const visible = dataPackage.candidates.filter(
+            (candidate) =>
+                candidate.supporting_outputs >= minimumSupport &&
+                (
+                    !query ||
+                    candidate.text.toLowerCase().includes(query)
+                )
+        );
+
+        visible.forEach((candidate) => {
+            const card = document.createElement("article");
+            card.className =
+                "synthetic-background-candidate-card";
+
+            const header = document.createElement("div");
+            header.className =
+                "synthetic-background-candidate-header";
+
+            const time = document.createElement("strong");
+            time.textContent =
+                `${formatCandidateTime(candidate.start)}–` +
+                `${formatCandidateTime(candidate.end)}`;
+
+            const label = document.createElement("span");
+            label.className = "synthetic-support-label";
+            label.textContent = candidate.support_label;
+
+            header.append(time, label);
+
+            const text = document.createElement("p");
+            text.className =
+                "synthetic-background-candidate-text";
+            text.textContent = candidate.text;
+
+            const metrics = document.createElement("div");
+            metrics.className =
+                "synthetic-background-candidate-metrics";
+            metrics.textContent =
+                `${candidate.supporting_outputs} outputs · ` +
+                `${candidate.supporting_windows} windows · ` +
+                `${candidate.supporting_models.length} model(s) · ` +
+                `${candidate.supporting_variants.join(", ")}`;
+
+            const actions = document.createElement("div");
+            actions.className =
+                "synthetic-candidate-actions";
+
+            const open = document.createElement("button");
+            open.type = "button";
+            open.textContent = "Open source interval";
+            open.addEventListener("click", () => {
+                createSelection(
+                    Math.max(0, candidate.start - 0.35),
+                    candidate.end + 0.35,
+                    true
+                );
+
+                const listenTab = Array.from(
+                    document.querySelectorAll(
+                        "#full-recording .lab-tab-button"
+                    )
+                ).find((button) =>
+                    /listen/i.test(button.textContent)
+                );
+
+                listenTab?.click();
+            });
+
+            const say = document.createElement("button");
+            say.type = "button";
+            say.textContent = "Speak candidate";
+            say.addEventListener("click", () => {
+                speak(candidate.text);
+            });
+
+            actions.append(open, say);
+
+            const details = document.createElement("details");
+            details.className =
+                "synthetic-candidate-sources";
+
+            const summary = document.createElement("summary");
+            summary.textContent =
+                "Show all contributing model outputs";
+
+            const list = document.createElement("ul");
+
+            candidate.sources.forEach((source) => {
+                const item = document.createElement("li");
+                const sourceName = document.createElement("strong");
+                sourceName.textContent =
+                    `${source.model_name} · ${source.variant} · ` +
+                    `${source.window_duration.toFixed(1)}s window · ` +
+                    `${source.pass_id}`;
+
+                const sourceScore = document.createElement("span");
+                sourceScore.textContent =
+                    `${formatCandidateTime(source.window_start)}–` +
+                    `${formatCandidateTime(source.window_end)} · ` +
+                    `avg log score ` +
+                    `${source.avg_logprob.toFixed(3)} · ` +
+                    `no-speech ` +
+                    `${source.no_speech_prob.toFixed(3)}`;
+
+                const quote = document.createElement("blockquote");
+                quote.textContent = source.text;
+
+                item.append(
+                    sourceName,
+                    sourceScore,
+                    quote
+                );
+                list.append(item);
+            });
+
+            details.append(summary, list);
+
+            card.append(
+                header,
+                text,
+                metrics,
+                actions,
+                details
+            );
+            candidatesContainer.append(card);
+        });
+
+        if (!visible.length) {
+            const empty = document.createElement("div");
+            empty.className = "synthetic-empty";
+            empty.textContent =
+                "No candidates match the current recurrence " +
+                "and wording filters.";
+            candidatesContainer.append(empty);
+        }
+
+        status.textContent =
+            `${visible.length} of ` +
+            `${dataPackage.candidates.length} candidate clusters shown.`;
+    }
+
+    async function loadPackage() {
+        status.textContent =
+            "Loading synthetic background-chatter package…";
+        candidatesContainer.textContent = "";
+        audioContainer.hidden = true;
+        provenancePanel.hidden = true;
+
+        try {
+            const response = await fetch(
+                "./assets/data/synthetic-background-chatter.json" +
+                `?cache=${Date.now()}`,
+                { cache: "no-store" }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    `HTTP ${response.status}; run the local ` +
+                    "background-chatter sweep first."
+                );
+            }
+
+            const data = await response.json();
+
+            if (
+                data.schema !==
+                "experimental_synthetic_background_chatter_v1"
+            ) {
+                throw new Error(
+                    `Unexpected schema: ${data.schema}`
+                );
+            }
+
+            dataPackage = data;
+            renderAudio();
+            renderCandidates();
+
+            provenancePanel.hidden = false;
+            provenanceJson.textContent = JSON.stringify(
+                {
+                    schema: data.schema,
+                    generated_at_utc: data.generated_at_utc,
+                    status: data.status,
+                    warnings: data.warnings,
+                    source: data.source,
+                    selection: data.selection,
+                    configuration: data.configuration,
+                    models: data.models,
+                    environment: data.environment
+                },
+                null,
+                2
+            );
+        }
+        catch (error) {
+            dataPackage = null;
+            status.textContent =
+                "Background-chatter results unavailable: " +
+                error.message;
+        }
+    }
+
+    reloadButton.addEventListener("click", loadPackage);
+    supportFilter.addEventListener(
+        "change",
+        renderCandidates
+    );
+    search.addEventListener("input", renderCandidates);
+
+    loadPackage();
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener(
+        "DOMContentLoaded",
+        () => initializeSyntheticBackgroundChatter(),
+        { once: true }
+    );
+}
+else {
+    initializeSyntheticBackgroundChatter();
+}
+
+// model-interpretation-audio-loop-v1
+
+function initializeModelInterpretationAudioLoop(attempt = 0) {
+    const panel = document.getElementById(
+        "synthetic-reconstruction-panel"
+    );
+
+    if (!panel) {
+        if (attempt < 80) {
+            window.setTimeout(
+                () => initializeModelInterpretationAudioLoop(
+                    attempt + 1
+                ),
+                100
+            );
+        }
+        return;
+    }
+
+    if (panel.dataset.actualAudioLoopInstalled === "true") {
+        return;
+    }
+
+    panel.dataset.actualAudioLoopInstalled = "true";
+
+    if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+    }
+
+    const tabButton = Array.from(
+        document.querySelectorAll(
+            "#full-recording .lab-tab-button"
+        )
+    ).find((button) =>
+        /synthetic reconstruction/i.test(
+            button.textContent || ""
+        )
+    );
+
+    if (tabButton) {
+        tabButton.textContent = "Model interpretations";
+    }
+
+    const heading = panel.querySelector(
+        ".synthetic-reconstruction-card > " +
+        ".forensic-panel-heading h3"
+    );
+
+    if (heading) {
+        heading.textContent =
+            "Model interpretations — not a transcript";
+    }
+
+    const eyebrow = panel.querySelector(
+        ".synthetic-reconstruction-card > " +
+        ".forensic-panel-heading .eyebrow"
+    );
+
+    if (eyebrow) {
+        eyebrow.textContent =
+            "Machine-generated wording hypotheses";
+    }
+
+    const warning = panel.querySelector(
+        ".synthetic-reconstruction-warning"
+    );
+
+    if (warning) {
+        warning.textContent =
+            "The models propose possible wording for ambiguous " +
+            "speech. Playback always uses the actual source audio " +
+            "or a disclosed conventional processing variant. " +
+            "Generated wording is not a verified quotation.";
+    }
+
+    const backgroundHeading = panel.querySelector(
+        "#synthetic-background-chatter h3"
+    );
+
+    if (backgroundHeading) {
+        backgroundHeading.textContent =
+            "Background-chatter interpretations";
+    }
+
+    const host = panel.querySelector(
+        ".synthetic-reconstruction-card"
+    );
+
+    if (!host) {
+        return;
+    }
+
+    const reviewBar = document.createElement("section");
+    reviewBar.className = "actual-audio-review-bar";
+    reviewBar.innerHTML = `
+        <div class="actual-audio-review-copy">
+            <p class="eyebrow">Actual-source listening</p>
+            <strong>
+                Model text above; source audio below
+            </strong>
+            <span>
+                Candidate buttons create a precise waveform selection,
+                enable looping, and play the actual recording through
+                the current processing settings.
+            </span>
+        </div>
+
+        <div class="actual-audio-review-actions">
+            <button
+                id="model-loop-current-selection"
+                type="button"
+            >
+                Loop current selection
+            </button>
+
+            <button
+                id="model-raw-channel-2"
+                type="button"
+            >
+                Raw Channel 2
+            </button>
+
+            <button
+                id="model-open-processing"
+                type="button"
+            >
+                Open adjustments
+            </button>
+
+            <button
+                id="model-stop-loop"
+                type="button"
+            >
+                Stop
+            </button>
+        </div>
+
+        <output
+            id="model-audio-review-status"
+            class="actual-audio-review-status"
+        >
+            Waiting for a candidate or waveform selection.
+        </output>
+    `;
+
+    const firstResultStatus = host.querySelector(
+        "#synthetic-result-status"
+    );
+
+    if (firstResultStatus) {
+        firstResultStatus.insertAdjacentElement(
+            "afterend",
+            reviewBar
+        );
+    }
+    else {
+        host.prepend(reviewBar);
+    }
+
+    const reviewStatus = document.getElementById(
+        "model-audio-review-status"
+    );
+
+    function formatLoopTime(seconds) {
+        const safe = Number.isFinite(seconds)
+            ? Math.max(0, seconds)
+            : 0;
+        const minutes = Math.floor(safe / 60);
+        const remainder = safe - minutes * 60;
+
+        return (
+            `${String(minutes).padStart(2, "0")}:` +
+            `${remainder.toFixed(2).padStart(5, "0")}`
+        );
+    }
+
+    function listenTabButton() {
+        return Array.from(
+            document.querySelectorAll(
+                "#full-recording .lab-tab-button"
+            )
+        ).find((button) =>
+            /listen/i.test(button.textContent || "")
+        );
+    }
+
+    function processingTabButton() {
+        return Array.from(
+            document.querySelectorAll(
+                "#full-recording .lab-tab-button"
+            )
+        ).find((button) =>
+            /enhance|adjust|process/i.test(
+                button.textContent || ""
+            )
+        );
+    }
+
+    function updateReviewStatus(prefix = "Selection") {
+        if (!activeRegion) {
+            reviewStatus.textContent =
+                "No waveform selection is active.";
+            return;
+        }
+
+        const mode =
+            channelMode?.selectedOptions?.[0]?.textContent ||
+            channelMode?.value ||
+            "current routing";
+
+        const processing =
+            bypassFilters?.checked
+                ? "processing bypassed"
+                : "current processing enabled";
+
+        reviewStatus.textContent =
+            `${prefix}: ` +
+            `${formatLoopTime(activeRegion.start)}–` +
+            `${formatLoopTime(activeRegion.end)} · ` +
+            `${mode} · ${processing} · looping`;
+    }
+
+    async function startActualAudioLoop(
+        options = {}
+    ) {
+        if (!activeRegion) {
+            reviewStatus.textContent =
+                "Create or open a waveform selection first.";
+            return;
+        }
+
+        if (options.rawChannel2) {
+            if (channelMode) {
+                channelMode.value = "channel2";
+                channelMode.dispatchEvent(
+                    new Event("change", { bubbles: true })
+                );
+            }
+
+            if (bypassFilters) {
+                bypassFilters.checked = true;
+                bypassFilters.dispatchEvent(
+                    new Event("change", { bubbles: true })
+                );
+            }
+        }
+
+        if (loopSelection) {
+            loopSelection.checked = true;
+            loopSelection.dispatchEvent(
+                new Event("change", { bubbles: true })
+            );
+        }
+
+        try {
+            await playActiveSelection();
+            updateReviewStatus(
+                options.rawChannel2
+                    ? "Raw Channel 2"
+                    : "Actual source"
+            );
+        }
+        catch (error) {
+            reviewStatus.textContent =
+                `Playback failed: ${error.message}`;
+        }
+    }
+
+    function stopActualAudioLoop() {
+        if (loopSelection) {
+            loopSelection.checked = false;
+            loopSelection.dispatchEvent(
+                new Event("change", { bubbles: true })
+            );
+        }
+
+        selectionPlaybackActive = false;
+        wavesurfer.pause();
+
+        reviewStatus.textContent =
+            "Actual-audio loop stopped.";
+    }
+
+    document
+        .getElementById("model-loop-current-selection")
+        ?.addEventListener("click", () => {
+            startActualAudioLoop();
+        });
+
+    document
+        .getElementById("model-raw-channel-2")
+        ?.addEventListener("click", () => {
+            startActualAudioLoop({
+                rawChannel2: true
+            });
+        });
+
+    document
+        .getElementById("model-open-processing")
+        ?.addEventListener("click", () => {
+            processingTabButton()?.click();
+
+            if (activeRegion) {
+                updateReviewStatus(
+                    "Adjusting active loop"
+                );
+            }
+            else {
+                reviewStatus.textContent =
+                    "Processing controls opened. " +
+                    "Select a candidate to begin looping.";
+            }
+        });
+
+    document
+        .getElementById("model-stop-loop")
+        ?.addEventListener("click", stopActualAudioLoop);
+
+    function removeSyntheticSpeechControls(root = panel) {
+        root.querySelectorAll("button").forEach(
+            (button) => {
+                const text = (
+                    button.textContent || ""
+                ).trim();
+
+                if (
+                    /^(speak synthetic alternative|stop synthetic speech|speak candidate)$/i.test(
+                        text
+                    )
+                ) {
+                    button.remove();
+                }
+            }
+        );
+    }
+
+    function enhanceCandidateButtons(root = panel) {
+        removeSyntheticSpeechControls(root);
+
+        root.querySelectorAll(
+            ".synthetic-candidate-actions"
+        ).forEach((actions) => {
+            const sourceButton = Array.from(
+                actions.querySelectorAll("button")
+            ).find((button) =>
+                /open source (selection|interval)/i.test(
+                    button.textContent || ""
+                ) ||
+                /open & loop actual audio/i.test(
+                    button.textContent || ""
+                )
+            );
+
+            if (!sourceButton) {
+                return;
+            }
+
+            sourceButton.textContent =
+                "Open & loop actual audio";
+            sourceButton.classList.add(
+                "actual-audio-loop-button"
+            );
+
+            if (
+                !actions.querySelector(
+                    ".candidate-open-adjustments"
+                )
+            ) {
+                const adjustments =
+                    document.createElement("button");
+                adjustments.type = "button";
+                adjustments.className =
+                    "candidate-open-adjustments";
+                adjustments.textContent =
+                    "Adjust processing";
+                adjustments.addEventListener(
+                    "click",
+                    () => {
+                        processingTabButton()?.click();
+                    }
+                );
+
+                actions.append(adjustments);
+            }
+
+            if (
+                !actions.querySelector(
+                    ".candidate-stop-loop"
+                )
+            ) {
+                const stop =
+                    document.createElement("button");
+                stop.type = "button";
+                stop.className =
+                    "candidate-stop-loop";
+                stop.textContent = "Stop loop";
+                stop.addEventListener(
+                    "click",
+                    stopActualAudioLoop
+                );
+
+                actions.append(stop);
+            }
+        });
+    }
+
+    panel.addEventListener("click", (event) => {
+        const button = event.target.closest("button");
+
+        if (!button) {
+            return;
+        }
+
+        if (
+            button.classList.contains(
+                "actual-audio-loop-button"
+            ) ||
+            /open & loop actual audio/i.test(
+                button.textContent || ""
+            )
+        ) {
+            window.setTimeout(() => {
+                if (loopSelection) {
+                    loopSelection.checked = true;
+                    loopSelection.dispatchEvent(
+                        new Event(
+                            "change",
+                            { bubbles: true }
+                        )
+                    );
+                }
+
+                listenTabButton()?.click();
+
+                window.setTimeout(() => {
+                    startActualAudioLoop();
+                }, 70);
+            }, 40);
+        }
+    });
+
+    const observer = new MutationObserver(
+        (mutations) => {
+            for (const mutation of mutations) {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType !== Node.ELEMENT_NODE) {
+                        return;
+                    }
+
+                    enhanceCandidateButtons(node);
+                });
+            }
+        }
+    );
+
+    observer.observe(panel, {
+        childList: true,
+        subtree: true
+    });
+
+    enhanceCandidateButtons(panel);
+
+    regions.on("region-updated", () => {
+        if (loopSelection?.checked) {
+            updateReviewStatus("Updated selection");
+        }
+    });
+
+    const existingSpeechFunctionWarning =
+        panel.querySelector(
+            ".synthetic-reconstruction-card " +
+            ".compact-note"
+        );
+
+    if (existingSpeechFunctionWarning) {
+        existingSpeechFunctionWarning.textContent =
+            "Run the local models to update the wording. " +
+            "All listening controls use the actual source audio.";
+    }
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener(
+        "DOMContentLoaded",
+        () => initializeModelInterpretationAudioLoop(),
+        { once: true }
+    );
+}
+else {
+    initializeModelInterpretationAudioLoop();
+}

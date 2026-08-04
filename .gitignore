@@ -6,3 +6,8 @@ backup-before-forensic-tools-*
 backup-before-machine-hypotheses-*
 backup-before-visual-refresh-*
 backup-before-spectrogram-*
+.synthetic-reconstruction-work/
+backup-before-synthetic-reconstruction-*
+.synthetic-background-chatter-work/
+backup-before-synthetic-background-*
+backup-before-model-audio-loop-*
