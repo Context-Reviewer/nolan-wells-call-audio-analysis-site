@@ -1,0 +1,6 @@
+record_id,region_id,start_seconds,end_seconds,review_date_utc,reviewer,prior_exposure_to_claims,playback_device,environment,first_mode,raw_acoustic_observations,masking_or_degradation,free_response_raw_stereo,free_response_raw_channel_2,processing_preset,free_response_processed,phonetic_features,alternatives_considered,model_output_viewed_after_human_notes,retest_after_rest,confidence_category,provisional_or_reviewed,reason_for_category,reviewer_comments
+NW-OBS-001,A-broad,0.00,1.80,,,,,,,,,,,,,,,,,,,,
+NW-OBS-002,A-tight,0.08,1.62,,,,,,,,,,,,,,,,,,,,
+NW-OBS-003,B,3.40,8.80,,,,,,,,,,,,,,,,,,,,
+NW-OBS-004,C-broad,10.80,15.80,,,,,,,,,,,,,,,,,,,,
+NW-OBS-005,C-tight,12.55,15.05,,,,,,,,,,,,,,,,,,,,

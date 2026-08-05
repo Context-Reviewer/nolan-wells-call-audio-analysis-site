@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+        name="description"
+        content="Formal scope, procedures, confidence rules, quality controls, and limitations for the Nolan Wells Sea Tow call audio review."
+    >
+    <title>Formal Methods and Quality Controls</title>
+    <link rel="stylesheet" href="./styles.css">
+    <style>
+        .methods-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.8rem;
+        }
+
+        .methods-card {
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 0.62rem;
+            background: var(--surface);
+        }
+
+        .methods-card h3 {
+            margin-top: 0;
+        }
+
+        .methods-card p,
+        .methods-card li {
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        .methods-links {
+            display: grid;
+            gap: 0.45rem;
+        }
+
+        .methods-links a {
+            width: fit-content;
+        }
+
+        @media (max-width: 760px) {
+            .methods-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<header class="hero">
+    <div class="container">
+        <p class="eyebrow">Formal methods</p>
+        <h1>Scope, procedure, and quality controls</h1>
+        <p class="lead">
+            The rules governing the independent review, including what has
+            been completed, what remains provisional, and what cannot be
+            established from a YouTube-derived recording.
+        </p>
+        <div class="notice">
+            This framework improves documentation and reproducibility. It does
+            not convert the project into an accredited laboratory examination.
+        </div>
+    </div>
+</header>
+
+<main>
+<section class="container section">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Status</p>
+            <h2>Controls now in place</h2>
+        </div>
+        <span class="status high">Phase 1 documented</span>
+    </div>
+
+    <div class="methods-grid">
+        <article class="methods-card">
+            <h3>Defined scope</h3>
+            <p>
+                The examination question, source, candidate intervals,
+                permitted conclusions, and excluded claims are fixed in
+                writing.
+            </p>
+        </article>
+
+        <article class="methods-card">
+            <h3>Evidence manifest</h3>
+            <p>
+                Repository audio files are inventoried with SHA-256 hashes,
+                byte sizes, media metadata, and source limitations.
+            </p>
+        </article>
+
+        <article class="methods-card">
+            <h3>Standard procedure</h3>
+            <p>
+                Raw listening precedes processing and wording prompts.
+                Processing must remain disclosed, conservative, and directly
+                comparable with the source.
+            </p>
+        </article>
+
+        <article class="methods-card">
+            <h3>Confidence framework</h3>
+            <p>
+                Technical findings and speech interpretations use different
+                criteria. Existing speech conclusions remain provisional until
+                rescored and independently reviewed.
+            </p>
+        </article>
+
+        <article class="methods-card">
+            <h3>Observation separation</h3>
+            <p>
+                Acoustic observations, free responses, proposed wording,
+                alternatives, model output, and confidence decisions are
+                recorded in separate fields.
+            </p>
+        </article>
+
+        <article class="methods-card">
+            <h3>Change and review controls</h3>
+            <p>
+                Method or conclusion changes require a recorded reason.
+                Independent review has a defined checklist and remains
+                explicitly incomplete until performed.
+            </p>
+        </article>
+    </div>
+</section>
+
+<section class="container section">
+    <h2>Current limits</h2>
+
+    <ul class="limitations">
+        <li>
+            The native CXone/MDMR export and its custody records have not been
+            obtained.
+        </li>
+        <li>
+            Browser audio-engine validation against known signals is the next
+            internal quality-control phase.
+        </li>
+        <li>
+            Filter-residue playback and localized cross-channel measurements
+            remain to be implemented.
+        </li>
+        <li>
+            Controlled blind-listening data and independent technical review
+            require people other than the initial examiner.
+        </li>
+    </ul>
+</section>
+
+<section class="container section repository">
+    <h2>Method documents</h2>
+
+    <div class="methods-links">
+        <a class="primary-link" href="./forensic-methods/CASE-SCOPE.md">
+            Case scope
+        </a>
+        <a class="primary-link" href="./forensic-methods/SOP.md">
+            Standard operating procedure
+        </a>
+        <a class="primary-link" href="./forensic-methods/CONFIDENCE-FRAMEWORK.md">
+            Confidence framework
+        </a>
+        <a class="primary-link" href="./forensic-methods/EVIDENCE-MANIFEST.json">
+            Evidence manifest
+        </a>
+        <a class="primary-link" href="./forensic-methods/OBSERVATION-RECORD.csv">
+            Observation record
+        </a>
+        <a class="primary-link" href="./forensic-methods/INDEPENDENT-REVIEW-CHECKLIST.md">
+            Independent-review checklist
+        </a>
+        <a class="primary-link" href="./forensic-methods/METHOD-STATUS.json">
+            Method-status register
+        </a>
+    </div>
+</section>
+
+<section class="container section">
+    <a class="primary-link" href="./">
+        Return to the audio review
+    </a>
+</section>
+</main>
+
+<footer>
+    <div class="container">
+        <p>
+            Independent technical review using disclosed forensic-audio
+            methods. Not a certified forensic opinion.
+        </p>
+    </div>
+</footer>
+</body>
+</html>

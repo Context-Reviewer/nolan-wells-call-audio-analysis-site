@@ -1,0 +1,65 @@
+{
+  "schema": "nolan_wells_forensic_method_status_v1",
+  "updated_utc": "2026-08-04T00:00:00Z",
+  "project_classification": "independent technical review; not a certified or accredited forensic laboratory report",
+  "controls": [
+    {
+      "id": "scope",
+      "status": "implemented",
+      "evidence": "forensic-methods/CASE-SCOPE.md"
+    },
+    {
+      "id": "evidence_manifest",
+      "status": "implemented",
+      "evidence": "forensic-methods/EVIDENCE-MANIFEST.json"
+    },
+    {
+      "id": "standard_operating_procedure",
+      "status": "implemented",
+      "evidence": "forensic-methods/SOP.md"
+    },
+    {
+      "id": "confidence_framework",
+      "status": "implemented",
+      "evidence": "forensic-methods/CONFIDENCE-FRAMEWORK.md",
+      "note": "Existing speech conclusions remain provisional until rescored."
+    },
+    {
+      "id": "observation_interpretation_separation",
+      "status": "framework_ready",
+      "evidence": "forensic-methods/OBSERVATION-RECORD.csv",
+      "note": "Controlled observation records must still be completed."
+    },
+    {
+      "id": "change_control",
+      "status": "implemented",
+      "evidence": "forensic-methods/CHANGE-CONTROL.md"
+    },
+    {
+      "id": "browser_audio_validation",
+      "status": "pending_next_phase"
+    },
+    {
+      "id": "filter_residue_playback",
+      "status": "pending_next_phase"
+    },
+    {
+      "id": "localized_cross_channel_analysis",
+      "status": "pending_next_phase"
+    },
+    {
+      "id": "controlled_blind_listening",
+      "status": "requires_independent_participants"
+    },
+    {
+      "id": "independent_technical_review",
+      "status": "requires_external_reviewer",
+      "evidence": "forensic-methods/INDEPENDENT-REVIEW-CHECKLIST.md"
+    },
+    {
+      "id": "native_source_chain_of_custody",
+      "status": "blocked",
+      "reason": "Native CXone/MDMR export and custodian records have not been obtained."
+    }
+  ]
+}

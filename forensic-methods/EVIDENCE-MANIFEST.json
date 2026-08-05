@@ -1,0 +1,292 @@
+{
+  "schema": "nolan_wells_evidence_manifest_v1",
+  "generated_utc": "2026-08-05T00:39:37.1058580Z",
+  "case_id": "MP2607-0016-PUBLIC-AUDIO-REVIEW",
+  "repository_commit": "caee79d15e8375d424b8c048cbdfa2022c0b3075",
+  "acquisition": {
+    "public_source_url": "https://www.youtube.com/watch?v=oshE23g-rTY",
+    "claimed_original_filename": "CXone recording_Victoria Garcia_2026-07-04_21-48[UTC]_29427a8b-5b62-45b9-81c1-e95148784c4c_01.mp4",
+    "native_export_obtained": false,
+    "relationship_to_native": "Derivative; publicly circulated YouTube-derived recording.",
+    "chain_of_custody_before_publication": "Not established."
+  },
+  "tool_environment": {
+    "powershell": "7.6.3",
+    "ffprobe": "ffprobe version 8.1.2-full_build-www.gyan.dev Copyright (c) 2007-2026 the FFmpeg developers"
+  },
+  "items": [
+    {
+      "item_id": "AUDIO-001",
+      "path": "assets/audio/candidate-a-conservative.wav",
+      "filename": "candidate-a-conservative.wav",
+      "bytes": 221804,
+      "last_write_utc": "2026-08-04T01:18:49.8991232Z",
+      "sha256": "caad9c471eff9a17f2384ca4cfbbfe723d51b5e1fbc1864cb2244f1f67c3ebc5",
+      "media_probe": {
+        "error": "The property 'channel_layout' cannot be found on this object. Verify that the property exists."
+      }
+    },
+    {
+      "item_id": "AUDIO-002",
+      "path": "assets/audio/candidate-a-consonant.wav",
+      "filename": "candidate-a-consonant.wav",
+      "bytes": 221804,
+      "last_write_utc": "2026-08-04T01:18:49.9193970Z",
+      "sha256": "901bc1a2115daac4ed846b5598f169873151c65a445730b15d87982d7d65c59b",
+      "media_probe": {
+        "error": "The property 'channel_layout' cannot be found on this object. Verify that the property exists."
+      }
+    },
+    {
+      "item_id": "AUDIO-003",
+      "path": "assets/audio/candidate-a-raw.wav",
+      "filename": "candidate-a-raw.wav",
+      "bytes": 221804,
+      "last_write_utc": "2026-08-04T01:18:49.9239207Z",
+      "sha256": "70ae9c74bae2e1a7e5c437a27d65b9e4be97729c39152da2b27ea9d26ab7e651",
+      "media_probe": {
+        "error": "The property 'channel_layout' cannot be found on this object. Verify that the property exists."
+      }
+    },
+    {
+      "item_id": "AUDIO-004",
+      "path": "assets/audio/candidate-c-conservative.wav",
+      "filename": "candidate-c-conservative.wav",
+      "bytes": 360044,
+      "last_write_utc": "2026-08-04T01:18:49.9422401Z",
+      "sha256": "0cbe51d3414644108dee22df283983a4bfa731f50d8c17e257ecec6da7a029f5",
+      "media_probe": {
+        "error": "The property 'channel_layout' cannot be found on this object. Verify that the property exists."
+      }
+    },
+    {
+      "item_id": "AUDIO-005",
+      "path": "assets/audio/candidate-c-formant.wav",
+      "filename": "candidate-c-formant.wav",
+      "bytes": 360044,
+      "last_write_utc": "2026-08-04T01:18:49.9707086Z",
+      "sha256": "bb2b6f27b44dbea3b3412e2c9725bff08cf4a7bb0a9447d2ad83994554524857",
+      "media_probe": {
+        "error": "The property 'channel_layout' cannot be found on this object. Verify that the property exists."
+      }
+    },
+    {
+      "item_id": "AUDIO-006",
+      "path": "assets/audio/candidate-c-raw.wav",
+      "filename": "candidate-c-raw.wav",
+      "bytes": 360044,
+      "last_write_utc": "2026-08-04T01:18:49.9570505Z",
+      "sha256": "df221a12e38ac49fe053f05351b6e229762b67ade3be4fd4e253bb86f3d4d7cd",
+      "media_probe": {
+        "error": "The property 'channel_layout' cannot be found on this object. Verify that the property exists."
+      }
+    },
+    {
+      "item_id": "AUDIO-007",
+      "path": "assets/audio/full-recording-source.webm",
+      "filename": "full-recording-source.webm",
+      "bytes": 10489833,
+      "last_write_utc": "2026-08-04T01:18:50.1137618Z",
+      "sha256": "cda6fa0b117b3d9ee58b79a37ab751d8fe1583967034faf59ef8f2720d93ee3f",
+      "media_probe": {
+        "format_name": "matroska,webm",
+        "duration_seconds": 585.621,
+        "bit_rate": 143298,
+        "streams": [
+          {
+            "index": 0,
+            "codec_type": "audio",
+            "codec_name": "opus",
+            "sample_rate_hz": 48000,
+            "channels": 2,
+            "channel_layout": "stereo"
+          }
+        ]
+      }
+    },
+    {
+      "item_id": "AUDIO-008",
+      "path": "assets/audio/full-recording.mp3",
+      "filename": "full-recording.mp3",
+      "bytes": 14056173,
+      "last_write_utc": "2026-08-04T02:32:27.5671539Z",
+      "sha256": "23ce04b0cedf5effaf9043248b5ce6e776af88c07bb306201a6e3830c2608f80",
+      "media_probe": {
+        "format_name": "mp3",
+        "duration_seconds": 585.607271,
+        "bit_rate": 192021,
+        "streams": [
+          {
+            "index": 0,
+            "codec_type": "audio",
+            "codec_name": "mp3",
+            "sample_rate_hz": 48000,
+            "channels": 2,
+            "channel_layout": "stereo"
+          }
+        ]
+      }
+    },
+    {
+      "item_id": "AUDIO-009",
+      "path": "assets/audio/synthetic-background-chatter/normalized.mp3",
+      "filename": "normalized.mp3",
+      "bytes": 217341,
+      "last_write_utc": "2026-08-04T13:40:37.8863910Z",
+      "sha256": "390e7a77a509ee2c81c1c9eb2cd037a669b22b8de54c3278132cf4048f67a64a",
+      "media_probe": {
+        "format_name": "mp3",
+        "duration_seconds": 17.979,
+        "bit_rate": 96708,
+        "streams": [
+          {
+            "index": 0,
+            "codec_type": "audio",
+            "codec_name": "mp3",
+            "sample_rate_hz": 16000,
+            "channels": 1,
+            "channel_layout": "mono"
+          }
+        ]
+      }
+    },
+    {
+      "item_id": "AUDIO-010",
+      "path": "assets/audio/synthetic-background-chatter/raw.mp3",
+      "filename": "raw.mp3",
+      "bytes": 217341,
+      "last_write_utc": "2026-08-04T13:40:37.6306439Z",
+      "sha256": "d4bee6c32b052ebab0819374c6e0353ecd34bab932d8945b338b2c583815d530",
+      "media_probe": {
+        "format_name": "mp3",
+        "duration_seconds": 17.979,
+        "bit_rate": 96708,
+        "streams": [
+          {
+            "index": 0,
+            "codec_type": "audio",
+            "codec_name": "mp3",
+            "sample_rate_hz": 16000,
+            "channels": 1,
+            "channel_layout": "mono"
+          }
+        ]
+      }
+    },
+    {
+      "item_id": "AUDIO-011",
+      "path": "assets/audio/synthetic-background-chatter/speech_focus.mp3",
+      "filename": "speech_focus.mp3",
+      "bytes": 217341,
+      "last_write_utc": "2026-08-04T13:40:37.9987652Z",
+      "sha256": "c3c86cf226b566abdbe5a5417b93c70de4034c8aae13fcb62ef540247156b1b1",
+      "media_probe": {
+        "format_name": "mp3",
+        "duration_seconds": 17.979,
+        "bit_rate": 96708,
+        "streams": [
+          {
+            "index": 0,
+            "codec_type": "audio",
+            "codec_name": "mp3",
+            "sample_rate_hz": 16000,
+            "channels": 1,
+            "channel_layout": "mono"
+          }
+        ]
+      }
+    },
+    {
+      "item_id": "AUDIO-012",
+      "path": "assets/audio/synthetic-reconstruction/continuity.mp3",
+      "filename": "continuity.mp3",
+      "bytes": 241101,
+      "last_write_utc": "2026-08-04T13:30:23.7630675Z",
+      "sha256": "940ff99fa5889b05c33cdcf4c4041cc2c00faa1d6ee5ffb6b7e1db2b0784fe5d",
+      "media_probe": {
+        "format_name": "mp3",
+        "duration_seconds": 19.979,
+        "bit_rate": 96541,
+        "streams": [
+          {
+            "index": 0,
+            "codec_type": "audio",
+            "codec_name": "mp3",
+            "sample_rate_hz": 16000,
+            "channels": 1,
+            "channel_layout": "mono"
+          }
+        ]
+      }
+    },
+    {
+      "item_id": "AUDIO-013",
+      "path": "assets/audio/synthetic-reconstruction/normalized.mp3",
+      "filename": "normalized.mp3",
+      "bytes": 241101,
+      "last_write_utc": "2026-08-04T13:30:23.3305801Z",
+      "sha256": "4434196d2c0be6ff01ece7867c7ef4419dc9edcfb37ea102111301189e8b330e",
+      "media_probe": {
+        "format_name": "mp3",
+        "duration_seconds": 19.979,
+        "bit_rate": 96541,
+        "streams": [
+          {
+            "index": 0,
+            "codec_type": "audio",
+            "codec_name": "mp3",
+            "sample_rate_hz": 16000,
+            "channels": 1,
+            "channel_layout": "mono"
+          }
+        ]
+      }
+    },
+    {
+      "item_id": "AUDIO-014",
+      "path": "assets/audio/synthetic-reconstruction/raw.mp3",
+      "filename": "raw.mp3",
+      "bytes": 241101,
+      "last_write_utc": "2026-08-04T13:30:23.0491581Z",
+      "sha256": "95e0a77e2fa27d45946be4f20d1687dc431e0baae62ca458d0bdfcf58c4bd722",
+      "media_probe": {
+        "format_name": "mp3",
+        "duration_seconds": 19.979,
+        "bit_rate": 96541,
+        "streams": [
+          {
+            "index": 0,
+            "codec_type": "audio",
+            "codec_name": "mp3",
+            "sample_rate_hz": 16000,
+            "channels": 1,
+            "channel_layout": "mono"
+          }
+        ]
+      }
+    },
+    {
+      "item_id": "AUDIO-015",
+      "path": "assets/audio/synthetic-reconstruction/speech_focus.mp3",
+      "filename": "speech_focus.mp3",
+      "bytes": 241101,
+      "last_write_utc": "2026-08-04T13:30:23.6232071Z",
+      "sha256": "f00f4ab881c4126dfab486205842e9463322a62aad29e7954325b1580656e239",
+      "media_probe": {
+        "format_name": "mp3",
+        "duration_seconds": 19.979,
+        "bit_rate": 96541,
+        "streams": [
+          {
+            "index": 0,
+            "codec_type": "audio",
+            "codec_name": "mp3",
+            "sample_rate_hz": 16000,
+            "channels": 1,
+            "channel_layout": "mono"
+          }
+        ]
+      }
+    }
+  ]
+}

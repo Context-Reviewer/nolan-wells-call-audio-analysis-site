@@ -2258,3 +2258,18 @@ body.guided-advanced-open
         width: 100%;
     }
 }
+/* top-methods-link-v1 */
+
+.hero-methods-link {
+    margin: 0.75rem 0 0;
+}
+
+.hero-methods-link a {
+    color: var(--blue);
+    font-weight: 720;
+    text-decoration: none;
+}
+
+.hero-methods-link a:hover {
+    text-decoration: underline;
+}
