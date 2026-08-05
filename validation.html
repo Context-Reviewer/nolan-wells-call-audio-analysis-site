@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+        name="description"
+        content="Known-answer browser validation for the Nolan Wells audio-review interface."
+    >
+    <title>Browser Audio Validation</title>
+    <link rel="stylesheet" href="./styles.css">
+    <style>
+        .validation-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin: 1rem 0;
+        }
+
+        .validation-actions button {
+            min-height: 2.6rem;
+            padding: 0.55rem 0.8rem;
+        }
+
+        .validation-summary {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.65rem;
+            margin: 1rem 0;
+        }
+
+        .validation-summary article {
+            padding: 0.8rem;
+            border: 1px solid var(--border);
+            border-radius: 0.55rem;
+            background: var(--surface);
+        }
+
+        .validation-summary strong {
+            display: block;
+            font-size: 1.35rem;
+        }
+
+        .validation-result {
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            font-size: 0.74rem;
+        }
+
+        .validation-pass {
+            color: var(--green);
+        }
+
+        .validation-fail {
+            color: var(--red);
+        }
+
+        .validation-pending {
+            color: var(--amber);
+        }
+
+        .validation-details {
+            max-width: 42rem;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .validation-log {
+            max-height: 22rem;
+            overflow: auto;
+            padding: 0.8rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            background: #080d12;
+            white-space: pre-wrap;
+        }
+
+        #validation-frame {
+            position: fixed;
+            width: 2px;
+            height: 2px;
+            left: -100px;
+            top: -100px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        @media (max-width: 760px) {
+            .validation-summary {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+<header class="hero">
+    <div class="container">
+        <p class="eyebrow">Formal validation</p>
+        <h1>Browser audio-engine validation</h1>
+        <p class="lead">
+            Known test signals are used to check the actual selection,
+            channel-mix, filter-preset, gain, looping, and WAV-export code.
+        </p>
+        <div class="notice">
+            These tests establish whether the website behaves as designed in
+            this browser. They do not validate the wording of the disputed
+            recording.
+        </div>
+    </div>
+</header>
+
+<main>
+<section class="container section">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Step 1</p>
+            <h2>Run deterministic tests</h2>
+        </div>
+        <span id="validation-state" class="status uncertain">Not run</span>
+    </div>
+
+    <p>
+        This checks known file hashes, decoding, selection boundaries,
+        exported channel mixes, dB conversion, filter settings, and WAV
+        structure. It does not play sound.
+    </p>
+
+    <div class="validation-actions">
+        <button id="run-deterministic" type="button">
+            Run deterministic tests
+        </button>
+        <button id="run-live" type="button" disabled>
+            Run live routing and filter tests
+        </button>
+        <button id="run-loop" type="button" disabled>
+            Run loop-boundary test
+        </button>
+        <button id="download-report" type="button" disabled>
+            Download validation report
+        </button>
+    </div>
+
+    <div class="warning-strip">
+        The live tests briefly play test tones through the browser. Lower the
+        system volume before running them.
+    </div>
+
+    <div class="validation-summary">
+        <article>
+            <span>Passed</span>
+            <strong id="pass-count">0</strong>
+        </article>
+        <article>
+            <span>Failed</span>
+            <strong id="fail-count">0</strong>
+        </article>
+        <article>
+            <span>Pending</span>
+            <strong id="pending-count">0</strong>
+        </article>
+        <article>
+            <span>Total</span>
+            <strong id="total-count">0</strong>
+        </article>
+    </div>
+</section>
+
+<section class="container section">
+    <h2>Results</h2>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Test</th>
+                    <th>Result</th>
+                    <th>Measured detail</th>
+                </tr>
+            </thead>
+            <tbody id="validation-results"></tbody>
+        </table>
+    </div>
+</section>
+
+<section class="container section">
+    <h2>Environment and log</h2>
+    <pre id="validation-log" class="validation-log">Waiting.</pre>
+</section>
+
+<section class="container section">
+    <a class="primary-link" href="./methods.html">
+        Return to formal methods
+    </a>
+    <a class="primary-link" href="./">
+        Return to the audio review
+    </a>
+</section>
+</main>
+
+<iframe
+    id="validation-frame"
+    title="Hidden audio-review validation target"
+    src="./?phase2-validation=1"
+></iframe>
+
+<script type="module" src="./validation.js"></script>
+</body>
+</html>

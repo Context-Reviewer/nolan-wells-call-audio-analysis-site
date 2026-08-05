@@ -1,0 +1,542 @@
+{
+  "schema": "nolan_wells_browser_audio_validation_v1",
+  "generatedAtUtc": "2026-08-05T02:02:43.117Z",
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+    "platform": "Win32",
+    "language": "en-US",
+    "hardwareConcurrency": 28,
+    "deviceMemoryGb": 32,
+    "secureContext": true,
+    "pageUrl": "http://localhost:8000/validation.html"
+  },
+  "application": {
+    "validationHook": "browser-audio-validation-hook-v1",
+    "analysisBufferDisclosure": "Waveform-derived statistics and raw-mix browser WAV exports use the decoded analysis buffer at the sample rate recorded by the validation tests. Live listening uses the media playback and Web Audio chain."
+  },
+  "testMediaManifest": {
+    "schema": "nolan_wells_validation_test_media_v1",
+    "sample_rate_hz": 48000,
+    "files": [
+      {
+        "path": "assets/validation/filter-multitone.wav",
+        "bytes": 768044,
+        "sha256": "b047ca8c507bc9332891e676a6e03e28dd6a04e08e4d8ccc44cc66ff4a7d5437"
+      },
+      {
+        "path": "assets/validation/identical-cancellation.wav",
+        "bytes": 576044,
+        "sha256": "2cd60d4bbdaf1c1821201e896601a2efef9ae9bf1d0ce2b79c4aa06c941ef3ef"
+      },
+      {
+        "path": "assets/validation/known-stereo-routing.wav",
+        "bytes": 768044,
+        "sha256": "b16517361db96a31a5af0ce595ede1a523a60c15a5507f595965629d58650f46"
+      },
+      {
+        "path": "assets/validation/opposite-polarity.wav",
+        "bytes": 576044,
+        "sha256": "fbcca1c8ca4e1840f34fe97154ddb290ecb6c255e9b301b2fb13a72c67ece82a"
+      }
+    ]
+  },
+  "summary": {
+    "passed": 35,
+    "failed": 0,
+    "pending": 0,
+    "overall": "pass"
+  },
+  "results": [
+    {
+      "id": "validation-hook",
+      "name": "Actual application validation hook",
+      "status": "pass",
+      "details": {
+        "version": "browser-audio-validation-hook-v1"
+      },
+      "recordedAtUtc": "2026-08-05T02:02:25.718Z"
+    },
+    {
+      "id": "app-source-fetch",
+      "name": "Application source available",
+      "status": "pass",
+      "details": {
+        "httpStatus": 200,
+        "sha256": "1c850cac5e4e96adf67e1d74cc25a2b5c1e08964f67b8ce42912fd6f0a3b1b5a"
+      },
+      "recordedAtUtc": "2026-08-05T02:02:25.731Z"
+    },
+    {
+      "id": "media-hash-assets/validation/filter-multitone.wav",
+      "name": "Test-media integrity: assets/validation/filter-multitone.wav",
+      "status": "pass",
+      "details": {
+        "expectedBytes": 768044,
+        "actualBytes": 768044,
+        "expectedSha256": "b047ca8c507bc9332891e676a6e03e28dd6a04e08e4d8ccc44cc66ff4a7d5437",
+        "actualSha256": "b047ca8c507bc9332891e676a6e03e28dd6a04e08e4d8ccc44cc66ff4a7d5437"
+      },
+      "recordedAtUtc": "2026-08-05T02:02:26.313Z"
+    },
+    {
+      "id": "media-hash-assets/validation/identical-cancellation.wav",
+      "name": "Test-media integrity: assets/validation/identical-cancellation.wav",
+      "status": "pass",
+      "details": {
+        "expectedBytes": 576044,
+        "actualBytes": 576044,
+        "expectedSha256": "2cd60d4bbdaf1c1821201e896601a2efef9ae9bf1d0ce2b79c4aa06c941ef3ef",
+        "actualSha256": "2cd60d4bbdaf1c1821201e896601a2efef9ae9bf1d0ce2b79c4aa06c941ef3ef"
+      },
+      "recordedAtUtc": "2026-08-05T02:02:26.362Z"
+    },
+    {
+      "id": "media-hash-assets/validation/known-stereo-routing.wav",
+      "name": "Test-media integrity: assets/validation/known-stereo-routing.wav",
+      "status": "pass",
+      "details": {
+        "expectedBytes": 768044,
+        "actualBytes": 768044,
+        "expectedSha256": "b16517361db96a31a5af0ce595ede1a523a60c15a5507f595965629d58650f46",
+        "actualSha256": "b16517361db96a31a5af0ce595ede1a523a60c15a5507f595965629d58650f46"
+      },
+      "recordedAtUtc": "2026-08-05T02:02:26.634Z"
+    },
+    {
+      "id": "media-hash-assets/validation/opposite-polarity.wav",
+      "name": "Test-media integrity: assets/validation/opposite-polarity.wav",
+      "status": "pass",
+      "details": {
+        "expectedBytes": 576044,
+        "actualBytes": 576044,
+        "expectedSha256": "fbcca1c8ca4e1840f34fe97154ddb290ecb6c255e9b301b2fb13a72c67ece82a",
+        "actualSha256": "fbcca1c8ca4e1840f34fe97154ddb290ecb6c255e9b301b2fb13a72c67ece82a"
+      },
+      "recordedAtUtc": "2026-08-05T02:02:26.679Z"
+    },
+    {
+      "id": "decode-routing-media",
+      "name": "Known stereo test media preserves duration and channels",
+      "status": "pass",
+      "details": {
+        "durationSeconds": 4,
+        "sampleRate": 8000,
+        "channels": 2,
+        "lengthSamples": 32000,
+        "sourceSampleRate": 48000,
+        "resampledForAnalysis": true
+      },
+      "recordedAtUtc": "2026-08-05T02:02:26.958Z"
+    },
+    {
+      "id": "analysis-buffer-rate",
+      "name": "Browser analysis-buffer sample rate characterized",
+      "status": "pass",
+      "details": {
+        "sourceSampleRate": 48000,
+        "decodedAnalysisSampleRate": 8000,
+        "resampled": true,
+        "note": "Waveform-derived statistics and raw-mix browser exports use this decoded analysis buffer. Live listening uses the media playback chain."
+      },
+      "recordedAtUtc": "2026-08-05T02:02:26.958Z"
+    },
+    {
+      "id": "selection-boundaries",
+      "name": "Selection duration maps to the expected decoded samples",
+      "status": "pass",
+      "details": {
+        "sampleRate": 8000,
+        "selectionDurationSeconds": 0.5,
+        "leftSamples": 4000,
+        "rightSamples": 4000,
+        "expectedSamples": 4000
+      },
+      "recordedAtUtc": "2026-08-05T02:02:26.959Z"
+    },
+    {
+      "id": "export-channel1",
+      "name": "Export mix isolates Channel 1",
+      "status": "pass",
+      "details": {
+        "c1_440": 0.21837077239865463,
+        "c1_880": 0.0000013967318385563962
+      },
+      "recordedAtUtc": "2026-08-05T02:02:26.960Z"
+    },
+    {
+      "id": "export-channel2",
+      "name": "Export mix isolates Channel 2",
+      "status": "pass",
+      "details": {
+        "c2_440": 1.0419762946831489e-16,
+        "c2_880": 0.2154731783961443
+      },
+      "recordedAtUtc": "2026-08-05T02:02:26.960Z"
+    },
+    {
+      "id": "export-mono",
+      "name": "Mono export contains both channels at half gain",
+      "status": "pass",
+      "details": {
+        "mono_440": 0.10918538658007892,
+        "mono_880": 0.10773658959371887
+      },
+      "recordedAtUtc": "2026-08-05T02:02:26.960Z"
+    },
+    {
+      "id": "export-difference-cancel",
+      "name": "Difference export cancels identical channels",
+      "status": "pass",
+      "details": {
+        "rms": 0
+      },
+      "recordedAtUtc": "2026-08-05T02:02:26.997Z"
+    },
+    {
+      "id": "export-opposite-mono",
+      "name": "Mono export cancels opposite polarity",
+      "status": "pass",
+      "details": {
+        "rms": 0.000002305619628665498
+      },
+      "recordedAtUtc": "2026-08-05T02:02:27.285Z"
+    },
+    {
+      "id": "export-opposite-difference",
+      "name": "Difference export preserves opposite polarity",
+      "status": "pass",
+      "details": {
+        "rms": 0.15147421318583518
+      },
+      "recordedAtUtc": "2026-08-05T02:02:27.285Z"
+    },
+    {
+      "id": "db-gain-0",
+      "name": "dB conversion: 0 dB",
+      "status": "pass",
+      "details": {
+        "db": 0,
+        "expected": 1,
+        "actual": 1
+      },
+      "recordedAtUtc": "2026-08-05T02:02:27.285Z"
+    },
+    {
+      "id": "db-gain--6",
+      "name": "dB conversion: -6 dB",
+      "status": "pass",
+      "details": {
+        "db": -6,
+        "expected": 0.5011872336272722,
+        "actual": 0.5011872336272722
+      },
+      "recordedAtUtc": "2026-08-05T02:02:27.285Z"
+    },
+    {
+      "id": "db-gain-6",
+      "name": "dB conversion: 6 dB",
+      "status": "pass",
+      "details": {
+        "db": 6,
+        "expected": 1.9952623149688795,
+        "actual": 1.9952623149688795
+      },
+      "recordedAtUtc": "2026-08-05T02:02:27.285Z"
+    },
+    {
+      "id": "db-gain--60",
+      "name": "dB conversion: -60 dB",
+      "status": "pass",
+      "details": {
+        "db": -60,
+        "expected": 0,
+        "actual": 0
+      },
+      "recordedAtUtc": "2026-08-05T02:02:27.285Z"
+    },
+    {
+      "id": "preset-bypass",
+      "name": "Preset configuration: bypass",
+      "status": "pass",
+      "details": {
+        "channelMode": "stereo",
+        "channel1GainDb": 0,
+        "channel2GainDb": 0,
+        "masterGainDb": 0,
+        "playbackRate": 1,
+        "preservePitch": true,
+        "filtersBypassed": true,
+        "preset": "bypass",
+        "highpass": {
+          "enabled": false,
+          "frequencyHz": 100
+        },
+        "lowpass": {
+          "enabled": false,
+          "frequencyHz": 6000
+        },
+        "notch": {
+          "enabled": false,
+          "frequencyHz": 1000,
+          "q": 8
+        },
+        "presencePeak": {
+          "enabled": false,
+          "frequencyHz": 2500,
+          "gainDb": 4,
+          "q": 1.2
+        },
+        "compressorEnabled": false
+      },
+      "recordedAtUtc": "2026-08-05T02:02:27.323Z"
+    },
+    {
+      "id": "preset-speech-mild",
+      "name": "Preset configuration: speech-mild",
+      "status": "pass",
+      "details": {
+        "channelMode": "stereo",
+        "channel1GainDb": 0,
+        "channel2GainDb": 0,
+        "masterGainDb": 0,
+        "playbackRate": 1,
+        "preservePitch": true,
+        "filtersBypassed": false,
+        "preset": "speech-mild",
+        "highpass": {
+          "enabled": true,
+          "frequencyHz": 100
+        },
+        "lowpass": {
+          "enabled": true,
+          "frequencyHz": 6000
+        },
+        "notch": {
+          "enabled": false,
+          "frequencyHz": 1000,
+          "q": 8
+        },
+        "presencePeak": {
+          "enabled": true,
+          "frequencyHz": 2500,
+          "gainDb": 4,
+          "q": 1.2
+        },
+        "compressorEnabled": false
+      },
+      "recordedAtUtc": "2026-08-05T02:02:27.323Z"
+    },
+    {
+      "id": "preset-speech-narrow",
+      "name": "Preset configuration: speech-narrow",
+      "status": "pass",
+      "details": {
+        "channelMode": "stereo",
+        "channel1GainDb": 0,
+        "channel2GainDb": 0,
+        "masterGainDb": 0,
+        "playbackRate": 1,
+        "preservePitch": true,
+        "filtersBypassed": false,
+        "preset": "speech-narrow",
+        "highpass": {
+          "enabled": true,
+          "frequencyHz": 180
+        },
+        "lowpass": {
+          "enabled": true,
+          "frequencyHz": 4200
+        },
+        "notch": {
+          "enabled": false,
+          "frequencyHz": 1000,
+          "q": 8
+        },
+        "presencePeak": {
+          "enabled": true,
+          "frequencyHz": 2200,
+          "gainDb": 6,
+          "q": 1.6
+        },
+        "compressorEnabled": true
+      },
+      "recordedAtUtc": "2026-08-05T02:02:27.324Z"
+    },
+    {
+      "id": "preset-rumble",
+      "name": "Preset configuration: rumble",
+      "status": "pass",
+      "details": {
+        "channelMode": "stereo",
+        "channel1GainDb": 0,
+        "channel2GainDb": 0,
+        "masterGainDb": 0,
+        "playbackRate": 1,
+        "preservePitch": true,
+        "filtersBypassed": false,
+        "preset": "rumble",
+        "highpass": {
+          "enabled": true,
+          "frequencyHz": 180
+        },
+        "lowpass": {
+          "enabled": false,
+          "frequencyHz": 6000
+        },
+        "notch": {
+          "enabled": false,
+          "frequencyHz": 1000,
+          "q": 8
+        },
+        "presencePeak": {
+          "enabled": false,
+          "frequencyHz": 2500,
+          "gainDb": 4,
+          "q": 1.2
+        },
+        "compressorEnabled": false
+      },
+      "recordedAtUtc": "2026-08-05T02:02:27.324Z"
+    },
+    {
+      "id": "wav-header",
+      "name": "WAV export header",
+      "status": "pass",
+      "details": {
+        "riff": "RIFF",
+        "wave": "WAVE",
+        "formatTag": 1,
+        "channels": 2,
+        "sampleRate": 48000,
+        "bitsPerSample": 16,
+        "dataTag": "data",
+        "dataBytes": 20
+      },
+      "recordedAtUtc": "2026-08-05T02:02:27.325Z"
+    },
+    {
+      "id": "wav-size",
+      "name": "WAV export byte length",
+      "status": "pass",
+      "details": {
+        "expectedBytes": 64,
+        "actualBytes": 64,
+        "sha256": "fa28aaeb61a921cbe6c9b8a40c5d1c07c0b58545eaee8da6c657f7814af2cbd9"
+      },
+      "recordedAtUtc": "2026-08-05T02:02:27.325Z"
+    },
+    {
+      "id": "live-routing-filter",
+      "name": "Live routing, gain, and filter response",
+      "status": "pass",
+      "details": {
+        "completed": true
+      },
+      "recordedAtUtc": "2026-08-05T02:02:40.366Z"
+    },
+    {
+      "id": "loop-boundary",
+      "name": "Actual selection-loop behavior",
+      "status": "pass",
+      "details": {
+        "selectionStart": 0.2,
+        "selectionEnd": 0.5,
+        "observedWraps": 4,
+        "observedMinimumSeconds": 0.2,
+        "observedMaximumSeconds": 0.490667,
+        "sampleCount": 67
+      },
+      "recordedAtUtc": "2026-08-05T02:02:35.850Z"
+    },
+    {
+      "id": "live-routing-stereo",
+      "name": "Live stereo contains both known tones",
+      "status": "pass",
+      "details": {
+        "80": -126.10603332519531,
+        "440": -33.65397262573242,
+        "500": -95.93734741210938,
+        "880": -32.78008270263672,
+        "1000": -113.99193572998047,
+        "2200": -139.34896850585938,
+        "8000": -177.98468017578125
+      },
+      "recordedAtUtc": "2026-08-05T02:02:38.320Z"
+    },
+    {
+      "id": "live-routing-channel1",
+      "name": "Live Channel 1 suppresses Channel 2 tone",
+      "status": "pass",
+      "details": {
+        "db440": -27.62090301513672,
+        "db880": -83.91053771972656,
+        "separationDb": 56.289634704589844
+      },
+      "recordedAtUtc": "2026-08-05T02:02:38.321Z"
+    },
+    {
+      "id": "live-routing-channel2",
+      "name": "Live Channel 2 suppresses Channel 1 tone",
+      "status": "pass",
+      "details": {
+        "db440": -79.95858001708984,
+        "db880": -26.766435623168945,
+        "separationDb": 53.1921443939209
+      },
+      "recordedAtUtc": "2026-08-05T02:02:38.321Z"
+    },
+    {
+      "id": "live-master-gain",
+      "name": "Live master gain applies approximately −6 dB",
+      "status": "pass",
+      "details": {
+        "baselineDb": -26.74544906616211,
+        "reducedDb": -32.468727111816406,
+        "measuredDeltaDb": -5.723278045654297
+      },
+      "recordedAtUtc": "2026-08-05T02:02:38.684Z"
+    },
+    {
+      "id": "live-difference-cancel",
+      "name": "Live difference mode cancels identical channels",
+      "status": "pass",
+      "details": {
+        "outputRms": 3.1696229664616876e-8
+      },
+      "recordedAtUtc": "2026-08-05T02:02:38.956Z"
+    },
+    {
+      "id": "live-filter-mild",
+      "name": "Mild speech preset changes the expected bands",
+      "status": "pass",
+      "details": {
+        "delta80Db": -2.1376113891601562,
+        "delta2200Db": 4.2303466796875,
+        "delta8000Db": -3.7541847229003906
+      },
+      "recordedAtUtc": "2026-08-05T02:02:40.365Z"
+    },
+    {
+      "id": "live-filter-narrow",
+      "name": "Narrow speech preset is more selective",
+      "status": "pass",
+      "details": {
+        "delta80Db": -11.374446868896484,
+        "delta2200Db": 8.927520751953125,
+        "delta8000Db": -9.359981536865234
+      },
+      "recordedAtUtc": "2026-08-05T02:02:40.366Z"
+    },
+    {
+      "id": "live-filter-rumble",
+      "name": "Rumble preset reduces low frequency while preserving higher bands",
+      "status": "pass",
+      "details": {
+        "delta80Db": -13.18112564086914,
+        "delta2200Db": 0.058261871337890625,
+        "delta8000Db": 0.00844573974609375
+      },
+      "recordedAtUtc": "2026-08-05T02:02:40.366Z"
+    }
+  ]
+}

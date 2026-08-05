@@ -166,6 +166,39 @@ let latestExportHash = null;
 
 let audioGraph = null;
 let spectrumAnimationFrame = null;
+// analysis-buffer-disclosure-v1
+function updateAnalysisBufferDisclosure() {
+    if (!decodedAudio) {
+        return;
+    }
+
+    const panel = document.querySelector(
+        ".selection-analysis-panel"
+    );
+
+    if (!panel) {
+        return;
+    }
+
+    let note = document.getElementById(
+        "analysis-buffer-disclosure"
+    );
+
+    if (!note) {
+        note = document.createElement("p");
+        note.id = "analysis-buffer-disclosure";
+        note.className = "muted compact-note";
+        panel
+            .querySelector(".forensic-panel-heading")
+            ?.insertAdjacentElement("afterend", note);
+    }
+
+    note.textContent =
+        `Selection statistics and raw-mix browser WAV ` +
+        `exports use a ${decodedAudio.sampleRate.toLocaleString()} Hz ` +
+        `decoded analysis buffer in this browser. Live listening ` +
+        `uses the original media playback chain.`;
+}
 
 function formatTime(seconds) {
     if (!Number.isFinite(seconds) || seconds < 0) {
@@ -1238,7 +1271,11 @@ function buildAnalysisReport() {
         source: {
             workingMedia: "assets/audio/full-recording.mp3",
             provenance:
-                "YouTube-derived working source; not represented as the native MDMR file."
+                "YouTube-derived working source; not represented as the native MDMR file.",
+            decodedAnalysisSampleRateHz:
+                decodedAudio?.sampleRate ?? null,
+            analysisBufferUse:
+                "Selection statistics and raw-mix browser WAV exports."
         },
         selection: {
             startSeconds: activeRegion.start,
@@ -1250,6 +1287,7 @@ function buildAnalysisReport() {
         lastExportSha256: latestExportHash,
         cautions: [
             "Browser filters are conventional non-generative DSP.",
+            "Waveform-derived statistics and raw-mix browser WAV exports use the decoded analysis buffer at its reported sample rate.",
             "Filtering cannot restore discarded information.",
             "Extreme settings may emphasize codec or phase artifacts.",
             "Transcription remains a human interpretation, not a measurement."
@@ -1357,6 +1395,7 @@ wavesurfer.on("ready", () => {
     updateClock(0);
 
     decodedAudio = wavesurfer.getDecodedData();
+    updateAnalysisBufferDisclosure();
 
     regions.enableDragSelection(
         {
@@ -1628,7 +1667,8 @@ exportSelectionWavButton.addEventListener("click", async () => {
 
         exportStatus.textContent =
             `Downloaded ${filename} · SHA-256 ${hash} · ` +
-            "raw channel mix; browser filters excluded.";
+            `raw channel mix from ${selection.sampleRate.toLocaleString()} Hz ` +
+            "decoded analysis buffer; browser filters excluded.";
     }
     catch (error) {
         exportStatus.textContent = error.message;
@@ -5864,3 +5904,187 @@ if (document.readyState === "loading") {
 else {
     initializeGuidedListeningMode();
 }
+
+// browser-audio-validation-hook-v1
+window.__nolanAudioValidation = Object.freeze({
+    version: "browser-audio-validation-hook-v1",
+
+    isReady() {
+        return Boolean(
+            decodedAudio &&
+            Number.isFinite(wavesurfer.getDuration()) &&
+            wavesurfer.getDuration() > 0
+        );
+    },
+
+    getMediaInfo() {
+        return {
+            durationSeconds: wavesurfer.getDuration(),
+            sampleRate: decodedAudio?.sampleRate ?? null,
+            channels: decodedAudio?.numberOfChannels ?? null,
+            lengthSamples: decodedAudio?.length ?? null
+        };
+    },
+
+    async loadMedia(url) {
+        selectionPlaybackActive = false;
+        loopSelection.checked = false;
+        wavesurfer.pause();
+        await wavesurfer.load(url);
+        decodedAudio = wavesurfer.getDecodedData();
+    updateAnalysisBufferDisclosure();
+
+        return this.getMediaInfo();
+    },
+
+    createSelection(start, end) {
+        createSelection(start, end, false);
+
+        return {
+            start: activeRegion?.start ?? null,
+            end: activeRegion?.end ?? null
+        };
+    },
+
+    getSelection() {
+        return activeRegion
+            ? {
+                start: activeRegion.start,
+                end: activeRegion.end
+            }
+            : null;
+    },
+
+    getSelectionSampleData(mode) {
+        const result = getSelectionSampleData(mode);
+
+        return {
+            sampleRate: result.sampleRate,
+            channels: result.channels.map(
+                (channel) => new Float32Array(channel)
+            )
+        };
+    },
+
+    encodeWav(channels, sampleRate) {
+        return encodeWav(channels, sampleRate);
+    },
+
+    dbToGain(value) {
+        return dbToGain(value);
+    },
+
+    collectSettings() {
+        return collectSettings();
+    },
+
+    async setChannelMode(mode) {
+        channelMode.value = mode;
+        await ensureAudioGraph();
+        applyChannelRouting();
+        return collectSettings();
+    },
+
+    async setGains(channel1Db, channel2Db, masterDb) {
+        channel1Gain.value = String(channel1Db);
+        channel2Gain.value = String(channel2Db);
+        masterGain.value = String(masterDb);
+        await ensureAudioGraph();
+        applyGainSettings();
+        return collectSettings();
+    },
+
+    async setPreset(name) {
+        filterPreset.value = name;
+        await ensureAudioGraph();
+        setPreset(name);
+        return collectSettings();
+    },
+
+    async setBypass(value) {
+        bypassFilters.checked = Boolean(value);
+        await ensureAudioGraph();
+        applyFilterSettings();
+        return collectSettings();
+    },
+
+    async playFrom(start = 0) {
+        await ensureAudioGraph();
+        selectionPlaybackActive = false;
+        wavesurfer.setTime(start);
+        await wavesurfer.play();
+    },
+
+    async playSelection(loop = false) {
+        loopSelection.checked = Boolean(loop);
+        await playActiveSelection();
+    },
+
+    stop() {
+        selectionPlaybackActive = false;
+        loopSelection.checked = false;
+        wavesurfer.pause();
+    },
+
+    getCurrentTime() {
+        return wavesurfer.getCurrentTime();
+    },
+
+    sampleSpectrum(frequencies) {
+        if (!audioGraph) {
+            throw new Error("Audio graph is not active.");
+        }
+
+        const analyser = audioGraph.analyser;
+        const values = new Float32Array(
+            analyser.frequencyBinCount
+        );
+        analyser.getFloatFrequencyData(values);
+
+        const nyquist = audioGraph.context.sampleRate / 2;
+
+        return {
+            sampleRate: audioGraph.context.sampleRate,
+            fftSize: analyser.fftSize,
+            values: Object.fromEntries(
+                frequencies.map((frequency) => {
+                    const bin = Math.max(
+                        0,
+                        Math.min(
+                            values.length - 1,
+                            Math.round(
+                                frequency /
+                                nyquist *
+                                values.length
+                            )
+                        )
+                    );
+
+                    return [
+                        String(frequency),
+                        Number(values[bin])
+                    ];
+                })
+            )
+        };
+    },
+
+    sampleOutputRms() {
+        if (!audioGraph) {
+            throw new Error("Audio graph is not active.");
+        }
+
+        const values = new Float32Array(
+            audioGraph.analyser.fftSize
+        );
+        audioGraph.analyser.getFloatTimeDomainData(values);
+
+        let sumSquares = 0;
+
+        for (const value of values) {
+            sumSquares += value * value;
+        }
+
+        return Math.sqrt(sumSquares / values.length);
+    }
+});

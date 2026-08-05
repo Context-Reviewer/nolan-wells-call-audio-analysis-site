@@ -1,0 +1,26 @@
+{
+  "schema": "nolan_wells_validation_test_media_v1",
+  "sample_rate_hz": 48000,
+  "files": [
+    {
+      "path": "assets/validation/filter-multitone.wav",
+      "bytes": 768044,
+      "sha256": "b047ca8c507bc9332891e676a6e03e28dd6a04e08e4d8ccc44cc66ff4a7d5437"
+    },
+    {
+      "path": "assets/validation/identical-cancellation.wav",
+      "bytes": 576044,
+      "sha256": "2cd60d4bbdaf1c1821201e896601a2efef9ae9bf1d0ce2b79c4aa06c941ef3ef"
+    },
+    {
+      "path": "assets/validation/known-stereo-routing.wav",
+      "bytes": 768044,
+      "sha256": "b16517361db96a31a5af0ce595ede1a523a60c15a5507f595965629d58650f46"
+    },
+    {
+      "path": "assets/validation/opposite-polarity.wav",
+      "bytes": 576044,
+      "sha256": "fbcca1c8ca4e1840f34fe97154ddb290ecb6c255e9b301b2fb13a72c67ece82a"
+    }
+  ]
+}

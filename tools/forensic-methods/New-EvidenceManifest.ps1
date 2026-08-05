@@ -98,7 +98,16 @@ $Items = foreach ($File in (
                                     $null
                                 }
                                 channels = $Stream.channels
-                                channel_layout = $Stream.channel_layout
+                                # optional-ffprobe-properties-v1
+                                channel_layout = if (
+                                    $Stream.PSObject.Properties.Name -contains
+                                    "channel_layout"
+                                ) {
+                                    $Stream.channel_layout
+                                }
+                                else {
+                                    $null
+                                }
                             }
                         }
                     )

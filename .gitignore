@@ -13,3 +13,7 @@ backup-before-synthetic-background-*
 backup-before-model-audio-loop-*
 backup-before-guided-listening-*
 backup-before-forensic-methods-phase-1-*
+backup-before-audio-validation-phase-2-*
+backup-before-analysis-buffer-correction-*
+backup-before-phase-2-finalization-*
+validation.js.backup-before-cross-realm-hash-fix

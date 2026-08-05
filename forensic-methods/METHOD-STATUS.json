@@ -1,6 +1,6 @@
 {
   "schema": "nolan_wells_forensic_method_status_v1",
-  "updated_utc": "2026-08-04T00:00:00Z",
+  "updated_utc": "2026-08-05T02:02:43.117Z",
   "project_classification": "independent technical review; not a certified or accredited forensic laboratory report",
   "controls": [
     {
@@ -37,7 +37,13 @@
     },
     {
       "id": "browser_audio_validation",
-      "status": "pending_next_phase"
+      "status": "implemented",
+      "evidence": [
+        "forensic-methods/validation-results/browser-audio-validation-20260805T020243Z.json",
+        "forensic-methods/validation-results/LATEST.md",
+        "forensic-methods/VALIDATION-PLAN.md"
+      ],
+      "note": "35 tests passed; 0 failed; 0 pending. Validated in Chrome 151 on Windows (Win32 environment). This establishes behavior in the recorded environment, not every browser."
     },
     {
       "id": "filter_residue_playback",

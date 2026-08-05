@@ -1,8 +1,8 @@
 {
   "schema": "nolan_wells_evidence_manifest_v1",
-  "generated_utc": "2026-08-05T00:39:37.1058580Z",
+  "generated_utc": "2026-08-05T02:02:13.3719642Z",
   "case_id": "MP2607-0016-PUBLIC-AUDIO-REVIEW",
-  "repository_commit": "caee79d15e8375d424b8c048cbdfa2022c0b3075",
+  "repository_commit": "c8aa692ab95a8db408821952731759a2d8d2bbc4",
   "acquisition": {
     "public_source_url": "https://www.youtube.com/watch?v=oshE23g-rTY",
     "claimed_original_filename": "CXone recording_Victoria Garcia_2026-07-04_21-48[UTC]_29427a8b-5b62-45b9-81c1-e95148784c4c_01.mp4",
@@ -23,7 +23,19 @@
       "last_write_utc": "2026-08-04T01:18:49.8991232Z",
       "sha256": "caad9c471eff9a17f2384ca4cfbbfe723d51b5e1fbc1864cb2244f1f67c3ebc5",
       "media_probe": {
-        "error": "The property 'channel_layout' cannot be found on this object. Verify that the property exists."
+        "format_name": "wav",
+        "duration_seconds": 1.54,
+        "bit_rate": 1152228,
+        "streams": [
+          {
+            "index": 0,
+            "codec_type": "audio",
+            "codec_name": "pcm_s24le",
+            "sample_rate_hz": 48000,
+            "channels": 1,
+            "channel_layout": null
+          }
+        ]
       }
     },
     {
@@ -34,7 +46,19 @@
       "last_write_utc": "2026-08-04T01:18:49.9193970Z",
       "sha256": "901bc1a2115daac4ed846b5598f169873151c65a445730b15d87982d7d65c59b",
       "media_probe": {
-        "error": "The property 'channel_layout' cannot be found on this object. Verify that the property exists."
+        "format_name": "wav",
+        "duration_seconds": 1.54,
+        "bit_rate": 1152228,
+        "streams": [
+          {
+            "index": 0,
+            "codec_type": "audio",
+            "codec_name": "pcm_s24le",
+            "sample_rate_hz": 48000,
+            "channels": 1,
+            "channel_layout": null
+          }
+        ]
       }
     },
     {
@@ -45,7 +69,19 @@
       "last_write_utc": "2026-08-04T01:18:49.9239207Z",
       "sha256": "70ae9c74bae2e1a7e5c437a27d65b9e4be97729c39152da2b27ea9d26ab7e651",
       "media_probe": {
-        "error": "The property 'channel_layout' cannot be found on this object. Verify that the property exists."
+        "format_name": "wav",
+        "duration_seconds": 1.54,
+        "bit_rate": 1152228,
+        "streams": [
+          {
+            "index": 0,
+            "codec_type": "audio",
+            "codec_name": "pcm_s24le",
+            "sample_rate_hz": 48000,
+            "channels": 1,
+            "channel_layout": null
+          }
+        ]
       }
     },
     {
@@ -56,7 +92,19 @@
       "last_write_utc": "2026-08-04T01:18:49.9422401Z",
       "sha256": "0cbe51d3414644108dee22df283983a4bfa731f50d8c17e257ecec6da7a029f5",
       "media_probe": {
-        "error": "The property 'channel_layout' cannot be found on this object. Verify that the property exists."
+        "format_name": "wav",
+        "duration_seconds": 2.5,
+        "bit_rate": 1152140,
+        "streams": [
+          {
+            "index": 0,
+            "codec_type": "audio",
+            "codec_name": "pcm_s24le",
+            "sample_rate_hz": 48000,
+            "channels": 1,
+            "channel_layout": null
+          }
+        ]
       }
     },
     {
@@ -67,7 +115,19 @@
       "last_write_utc": "2026-08-04T01:18:49.9707086Z",
       "sha256": "bb2b6f27b44dbea3b3412e2c9725bff08cf4a7bb0a9447d2ad83994554524857",
       "media_probe": {
-        "error": "The property 'channel_layout' cannot be found on this object. Verify that the property exists."
+        "format_name": "wav",
+        "duration_seconds": 2.5,
+        "bit_rate": 1152140,
+        "streams": [
+          {
+            "index": 0,
+            "codec_type": "audio",
+            "codec_name": "pcm_s24le",
+            "sample_rate_hz": 48000,
+            "channels": 1,
+            "channel_layout": null
+          }
+        ]
       }
     },
     {
@@ -78,7 +138,19 @@
       "last_write_utc": "2026-08-04T01:18:49.9570505Z",
       "sha256": "df221a12e38ac49fe053f05351b6e229762b67ade3be4fd4e253bb86f3d4d7cd",
       "media_probe": {
-        "error": "The property 'channel_layout' cannot be found on this object. Verify that the property exists."
+        "format_name": "wav",
+        "duration_seconds": 2.5,
+        "bit_rate": 1152140,
+        "streams": [
+          {
+            "index": 0,
+            "codec_type": "audio",
+            "codec_name": "pcm_s24le",
+            "sample_rate_hz": 48000,
+            "channels": 1,
+            "channel_layout": null
+          }
+        ]
       }
     },
     {
