@@ -1,7 +1,7 @@
 # Standard operating procedure
 
-**Document ID:** NW-FA-SOP-001  
-**Version:** 1.0  
+**Document ID:** NW-FA-SOP-001
+**Version:** 1.0
 **Effective date:** 2026-08-04
 
 ## 1. Purpose

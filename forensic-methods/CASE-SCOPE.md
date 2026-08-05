@@ -1,8 +1,8 @@
 # Case scope and examination request
 
-**Document ID:** NW-FA-SCOPE-001  
-**Version:** 1.0  
-**Effective date:** 2026-08-04  
+**Document ID:** NW-FA-SCOPE-001
+**Version:** 1.0
+**Effective date:** 2026-08-04
 **Case reference:** MP2607-0016-PUBLIC-AUDIO-REVIEW
 
 ## Examination question

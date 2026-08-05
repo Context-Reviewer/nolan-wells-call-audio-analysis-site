@@ -1,10 +1,10 @@
 # Technical audio examination report
 
-**Report ID:**  
-**Version:**  
-**Publication date:**  
-**Corresponding Git commit:**  
-**Report SHA-256:**  
+**Report ID:**
+**Version:**
+**Publication date:**
+**Corresponding Git commit:**
+**Report SHA-256:**
 **Review status:** Provisional / independently reviewed
 
 ## 1. Scope

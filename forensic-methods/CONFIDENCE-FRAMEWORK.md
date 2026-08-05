@@ -1,7 +1,7 @@
 # Confidence and conclusion framework
 
-**Document ID:** NW-FA-CF-001  
-**Version:** 1.0  
+**Document ID:** NW-FA-CF-001
+**Version:** 1.0
 **Adopted:** 2026-08-04
 
 This framework was adopted after the initial public analysis. Existing speech
