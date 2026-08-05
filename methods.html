@@ -68,12 +68,16 @@
 
 <main>
 <section class="container section">
-    <div class="section-heading">
+    <!-- standardized-phase-indicator-v1 -->
+    <div class="section-heading phase-heading">
         <div>
-            <p class="eyebrow">Status</p>
-            <h2>Controls now in place</h2>
+            <p class="eyebrow">Phase 1</p>
+            <h2>Methods and documentation</h2>
+            <p class="phase-validation-note">
+                Scope, procedure, confidence, evidence, and change controls
+            </p>
         </div>
-        <span class="status high">Phase 1 documented</span>
+        <span class="status high">Complete</span>
     </div>
 
     <div class="methods-grid">
@@ -137,16 +141,16 @@
 
     <ul class="limitations">
         <li>
-            The native CXone/MDMR export and its custody records have not been
-            obtained.
+            The native CXone/MDMR export and its custody records have not
+            been obtained.
         </li>
         <li>
-            Browser audio-engine validation against known signals is the next
-            internal quality-control phase.
+            Phase 3 processing-residue playback is implemented and validated in
+            the recorded Edge 151 Windows environment.
         </li>
         <li>
-            Filter-residue playback and localized cross-channel measurements
-            remain to be implemented.
+            Localized cross-channel delay, correlation, coherence, and
+            energy measurements remain to be implemented.
         </li>
         <li>
             Controlled blind-listening data and independent technical review
@@ -186,12 +190,15 @@
 
 <section class="container section">
     <!-- browser-audio-validation-phase-2-v1 -->
-    <div class="section-heading">
+    <div class="section-heading phase-heading">
         <div>
-            <p class="eyebrow">Software validation</p>
-            <h2>Known-answer browser tests</h2>
+            <p class="eyebrow">Phase 2</p>
+            <h2>Browser audio-engine validation</h2>
+            <p class="phase-validation-note">
+                35/35 known-answer checks passed
+            </p>
         </div>
-        <span class="status high">Passed · 35/35
+        <span class="status high">Complete</span>
     </div>
 
     <p>
@@ -219,6 +226,56 @@
         href="./forensic-methods/validation-results/LATEST.md"
     >
         View latest validation summary
+    </a>
+</section>
+
+<section class="container section">
+    <!-- processing-residue-phase-3-v1 -->
+    <div class="section-heading phase-heading">
+        <div>
+            <p class="eyebrow">Phase 3</p>
+            <h2>Processing-residue audit</h2>
+            <p class="phase-validation-note">
+                41/41 known-answer checks passed
+            </p>
+        </div>
+        <span class="status high">Complete</span>
+    </div>
+
+    <p>
+        The listening interface can now switch between the routed signal
+        before filtering, the processed output, and raw minus processed.
+        This makes the filter's effect directly audible.
+    </p>
+
+    <div class="notice">
+        Residue is a difference signal, not recovered speech. It includes
+        attenuation, phase, compressor timing, and other processing changes.
+    </div>
+
+    <a
+        class="primary-link"
+        href="./forensic-methods/FILTER-RESIDUE-PLAYBACK.md"
+    >
+        Read the processing-residue method
+    </a>
+    <!-- processing-residue-completed-20260805 -->
+    <div class="notice">
+        Completed 2026-08-05 in Microsoft Edge 151 on Windows:
+        41 passed, 0 failed, 0 pending. Raw, processed, and residue
+        routing passed; bypass residue approached numerical zero; the
+        rumble-filter residue emphasized the removed low-frequency
+        component; and the raw audit path preserved the known multitone.
+    </div>
+
+    <a
+        class="primary-link"
+        href="./forensic-methods/validation-results/LATEST.md"
+    >
+        View latest validation summary
+    </a>
+    <a class="primary-link" href="./validation.html">
+        Run Phase 3 validation
     </a>
 </section>
 

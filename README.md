@@ -60,3 +60,19 @@ wording.
 The run also characterized a 48 kHz encoded source and an 8 kHz
 WaveSurfer-derived analysis buffer. That distinction is disclosed in the
 application and report.
+
+<!-- processing-residue-phase-3-v1 -->
+
+## Processing-residue audit
+
+Phase 3 adds live comparison of raw routed audio, processed audio, and the
+raw-minus-processed residue. The residue is explicitly treated as a
+quality-control difference signal rather than recovered speech.
+<!-- processing-residue-completed-20260805 -->
+
+### Phase 3 validation complete
+
+The processing-residue audit completed with 41 passed, 0 failed, and
+0 pending in Microsoft Edge 151 on Windows. The result validates the tested
+raw, processed, and raw-minus-processed browser paths in that recorded
+environment.

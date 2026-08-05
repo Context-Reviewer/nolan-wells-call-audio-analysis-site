@@ -477,6 +477,88 @@
         </div>
     </details>
 
+
+    <!-- processing-residue-audit-v1 -->
+    <section
+        class="forensic-panel processing-audit-panel"
+        aria-labelledby="processing-audit-title"
+    >
+        <div class="forensic-panel-heading">
+            <div>
+                <p class="eyebrow">Processing audit</p>
+                <h3 id="processing-audit-title">
+                    Hear what the filters changed
+                </h3>
+            </div>
+            <output
+                id="processing-audit-status"
+                class="processing-state"
+            >
+                Processed output
+            </output>
+        </div>
+
+        <p>
+            Compare the routed signal before filtering, after filtering, and
+            the sample-by-sample residue calculated as raw minus processed.
+        </p>
+
+        <div class="processing-audit-grid">
+            <label>
+                Audition path
+                <select id="processing-audit-mode" disabled>
+                    <option value="processed" selected>
+                        Processed — after active filters
+                    </option>
+                    <option value="raw">
+                        Raw — before filters
+                    </option>
+                    <option value="residue">
+                        Residue — raw minus processed
+                    </option>
+                </select>
+            </label>
+
+            <div class="button-row processing-audit-shortcuts">
+                <button
+                    id="audit-original-stereo"
+                    type="button"
+                    disabled
+                >
+                    Original stereo
+                </button>
+                <button
+                    id="audit-raw-channel-2"
+                    type="button"
+                    disabled
+                >
+                    Raw Channel 2
+                </button>
+                <button
+                    id="audit-processed-channel-2"
+                    type="button"
+                    disabled
+                >
+                    Processed Channel 2
+                </button>
+                <button
+                    id="audit-residue-channel-2"
+                    type="button"
+                    disabled
+                >
+                    Channel 2 residue
+                </button>
+            </div>
+        </div>
+
+        <div class="warning-strip">
+            Residue is not recovered speech. It contains every change caused
+            by filtering, including attenuation, frequency-dependent phase
+            shift, compressor timing, and numerical difference. Treat it as a
+            quality-control signal, not as a separate speaker.
+        </div>
+    </section>
+
     <div class="zoom-panel">
         <label for="zoom-level">
             Horizontal zoom
@@ -1042,7 +1124,7 @@
     </div>
 </footer>
 
-<script type="module" src="./app.js?v=analysis-buffer-20260804220213"></script>
+<script type="module" src="./app.js?v=processing-residue-20260804224658"></script>
 </body>
 </html>
 

@@ -2273,3 +2273,50 @@ body.guided-advanced-open
 .hero-methods-link a:hover {
     text-decoration: underline;
 }
+/* processing-residue-audit-v1 */
+
+.processing-audit-panel {
+    margin-top: 1rem;
+}
+
+.processing-audit-grid {
+    display: grid;
+    grid-template-columns: minmax(15rem, 0.85fr) minmax(18rem, 1.4fr);
+    gap: 1rem;
+    align-items: end;
+}
+
+.processing-audit-shortcuts {
+    margin: 0;
+}
+
+.processing-audit-shortcuts button {
+    flex: 1 1 10rem;
+}
+
+@media (max-width: 760px) {
+    .processing-audit-grid {
+        grid-template-columns: 1fr;
+    }
+}
+/* standardized-phase-indicator-v1 */
+
+.phase-heading {
+    align-items: flex-start;
+}
+
+.phase-heading > div {
+    min-width: 0;
+}
+
+.phase-heading .status {
+    flex: 0 0 auto;
+    margin-top: 0.15rem;
+}
+
+.phase-validation-note {
+    margin: 0.35rem 0 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}

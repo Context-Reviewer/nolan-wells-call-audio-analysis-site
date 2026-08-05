@@ -107,3 +107,30 @@ sample-array operations. This is not automatically a boundary failure when:
 Every validation report must record both rates and whether resampling occurred.
 The public application must disclose the decoded rate used for selection
 statistics and browser WAV exports.
+## Processing-residue validation
+
+Phase 3 adds a live audit path after channel routing and before master output.
+
+The validation checks:
+
+- processed, raw, and residue mode state;
+- near-zero raw-minus-processed output when processing is bypassed;
+- low-frequency dominance in residue produced by the rumble-reduction preset;
+- preservation of the known multitone through the raw audit path.
+
+A passing result is limited to the recorded browser and operating environment.
+<!-- processing-residue-validation-completed-20260805 -->
+
+### Completed Phase 3 result
+
+The processing-residue validation completed on 2026-08-05 with 41 passed,
+0 failed, and 0 pending in Microsoft Edge 151 on Windows.
+
+The passing result includes:
+
+- raw, processed, and residue mode-state checks;
+- near-zero raw-minus-processed residue with processing bypassed;
+- expected low-frequency dominance in rumble-reduction residue;
+- preservation of the known multitone through the raw audit path.
+
+The result is limited to the recorded browser and operating environment.

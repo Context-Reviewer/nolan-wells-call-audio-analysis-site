@@ -1,6 +1,6 @@
 {
   "schema": "nolan_wells_forensic_method_status_v1",
-  "updated_utc": "2026-08-05T02:02:43.117Z",
+  "updated_utc": "2026-08-05T03:02:57.113Z",
   "project_classification": "independent technical review; not a certified or accredited forensic laboratory report",
   "controls": [
     {
@@ -47,7 +47,14 @@
     },
     {
       "id": "filter_residue_playback",
-      "status": "pending_next_phase"
+      "status": "implemented",
+      "evidence": [
+        "forensic-methods/FILTER-RESIDUE-PLAYBACK.md",
+        "forensic-methods/validation-results/browser-audio-validation-20260805T030257Z.json",
+        "forensic-methods/validation-results/LATEST.md",
+        "forensic-methods/VALIDATION-PLAN.md"
+      ],
+      "note": "41 tests passed; 0 failed; 0 pending. Raw, processed, and raw-minus-processed paths were validated in Microsoft Edge 151 on Windows. This establishes behavior in the recorded environment, not every browser."
     },
     {
       "id": "localized_cross_channel_analysis",

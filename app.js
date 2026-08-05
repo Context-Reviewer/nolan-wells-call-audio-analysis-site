@@ -78,6 +78,13 @@ const peakQ = get("peak-q");
 const peakQValue = get("peak-q-value");
 const resetProcessingButton = get("reset-processing");
 const filterStatus = get("filter-status");
+// processing-residue-audit-v1
+const processingAuditMode = get("processing-audit-mode");
+const processingAuditStatus = get("processing-audit-status");
+const auditOriginalStereoButton = get("audit-original-stereo");
+const auditRawChannel2Button = get("audit-raw-channel-2");
+const auditProcessedChannel2Button = get("audit-processed-channel-2");
+const auditResidueChannel2Button = get("audit-residue-channel-2");
 
 const spectrumCanvas = get("spectrum-canvas");
 const spectrumMaxFrequency = get("spectrum-max-frequency");
@@ -286,6 +293,11 @@ function setControlsEnabled(enabled) {
         peakGain,
         peakQ,
         resetProcessingButton,
+        processingAuditMode,
+        auditOriginalStereoButton,
+        auditRawChannel2Button,
+        auditProcessedChannel2Button,
+        auditResidueChannel2Button,
         spectrumMaxFrequency,
         exportMode,
         exportSelectionWavButton,
@@ -416,6 +428,14 @@ async function ensureAudioGraph() {
         const dryGain = context.createGain();
         const compressor = context.createDynamicsCompressor();
         const compressedGain = context.createGain();
+
+        const processedBus = context.createGain();
+        const rawAuditGain = context.createGain();
+        const processedAuditGain = context.createGain();
+        const residueRawGain = context.createGain();
+        const residueProcessedGain = context.createGain();
+        const auditOutput = context.createGain();
+
         const master = context.createGain();
         const analyser = context.createAnalyser();
 
@@ -429,6 +449,10 @@ async function ensureAudioGraph() {
         compressor.ratio.value = 3;
         compressor.attack.value = 0.006;
         compressor.release.value = 0.18;
+        rawAuditGain.gain.value = 0;
+        processedAuditGain.gain.value = 1;
+        residueRawGain.gain.value = 0;
+        residueProcessedGain.gain.value = 0;
 
         source.connect(splitter);
         splitter.connect(channel1Pre, 0);
@@ -453,9 +477,21 @@ async function ensureAudioGraph() {
         peak.connect(compressor);
         compressor.connect(compressedGain);
 
-        dryGain.connect(master);
-        compressedGain.connect(master);
+        dryGain.connect(processedBus);
+        compressedGain.connect(processedBus);
 
+        merger.connect(rawAuditGain);
+        processedBus.connect(processedAuditGain);
+
+        merger.connect(residueRawGain);
+        processedBus.connect(residueProcessedGain);
+
+        rawAuditGain.connect(auditOutput);
+        processedAuditGain.connect(auditOutput);
+        residueRawGain.connect(auditOutput);
+        residueProcessedGain.connect(auditOutput);
+
+        auditOutput.connect(master);
         master.connect(analyser);
         analyser.connect(context.destination);
 
@@ -477,6 +513,12 @@ async function ensureAudioGraph() {
             dryGain,
             compressor,
             compressedGain,
+            processedBus,
+            rawAuditGain,
+            processedAuditGain,
+            residueRawGain,
+            residueProcessedGain,
+            auditOutput,
             master,
             analyser
         };
@@ -659,40 +701,50 @@ function applyFilterSettings() {
     const now = audioGraph.context.currentTime;
 
     audioGraph.highpass.type =
-        !bypassed && highpassEnabled.checked ? "highpass" : "allpass";
+        !bypassed && highpassEnabled.checked ? "highpass" : "peaking";
     audioGraph.highpass.frequency.setTargetAtTime(
         Number(highpassFrequency.value),
         now,
         0.01
     );
     audioGraph.highpass.Q.setTargetAtTime(0.707, now, 0.01);
+    audioGraph.highpass.gain.setTargetAtTime(0, now, 0.01);
 
     audioGraph.lowpass.type =
-        !bypassed && lowpassEnabled.checked ? "lowpass" : "allpass";
+        !bypassed && lowpassEnabled.checked ? "lowpass" : "peaking";
     audioGraph.lowpass.frequency.setTargetAtTime(
         Number(lowpassFrequency.value),
         now,
         0.01
     );
     audioGraph.lowpass.Q.setTargetAtTime(0.707, now, 0.01);
+    audioGraph.lowpass.gain.setTargetAtTime(0, now, 0.01);
 
     audioGraph.notch.type =
-        !bypassed && notchEnabled.checked ? "notch" : "allpass";
+        !bypassed && notchEnabled.checked ? "notch" : "peaking";
     audioGraph.notch.frequency.setTargetAtTime(
         Number(notchFrequency.value),
         now,
         0.01
     );
     audioGraph.notch.Q.setTargetAtTime(Number(notchQ.value), now, 0.01);
+    audioGraph.notch.gain.setTargetAtTime(0, now, 0.01);
+
 
     audioGraph.peak.type =
-        !bypassed && peakEnabled.checked ? "peaking" : "allpass";
+        "peaking";
     audioGraph.peak.frequency.setTargetAtTime(
         Number(peakFrequency.value),
         now,
         0.01
     );
-    audioGraph.peak.gain.setTargetAtTime(Number(peakGain.value), now, 0.01);
+    audioGraph.peak.gain.setTargetAtTime(
+        !bypassed && peakEnabled.checked
+            ? Number(peakGain.value)
+            : 0,
+        now,
+        0.01
+    );
     audioGraph.peak.Q.setTargetAtTime(Number(peakQ.value), now, 0.01);
 
     const compressionActive = !bypassed && compressorEnabled.checked;
@@ -708,10 +760,86 @@ function applyFilterSettings() {
     );
 }
 
+function applyProcessingAuditMode() {
+    const labels = {
+        processed: "Processed output",
+        raw: "Raw before filters",
+        residue: "Residue · raw − processed"
+    };
+
+    const mode = processingAuditMode?.value || "processed";
+
+    if (processingAuditStatus) {
+        processingAuditStatus.textContent =
+            labels[mode] || labels.processed;
+        processingAuditStatus.classList.toggle(
+            "active",
+            mode !== "processed"
+        );
+    }
+
+    if (!audioGraph) {
+        return;
+    }
+
+    const values = {
+        processed: {
+            raw: 0,
+            processed: 1,
+            residueRaw: 0,
+            residueProcessed: 0
+        },
+        raw: {
+            raw: 1,
+            processed: 0,
+            residueRaw: 0,
+            residueProcessed: 0
+        },
+        residue: {
+            raw: 0,
+            processed: 0,
+            residueRaw: 1,
+            residueProcessed: -1
+        }
+    };
+
+    const selected = values[mode] || values.processed;
+    const now = audioGraph.context.currentTime;
+
+    [
+        [audioGraph.rawAuditGain, selected.raw],
+        [audioGraph.processedAuditGain, selected.processed],
+        [audioGraph.residueRawGain, selected.residueRaw],
+        [
+            audioGraph.residueProcessedGain,
+            selected.residueProcessed
+        ]
+    ].forEach(([node, value]) => {
+        node.gain.cancelScheduledValues(now);
+        node.gain.setTargetAtTime(value, now, 0.008);
+    });
+}
+
+async function applyProcessingAuditShortcut(
+    channel,
+    auditMode
+) {
+    channelMode.value = channel;
+    channel1Gain.value = "0";
+    channel2Gain.value = "0";
+    masterGain.value = "0";
+    processingAuditMode.value = auditMode;
+
+    await ensureAudioGraph();
+    applyChannelRouting();
+    applyGainSettings();
+    applyProcessingAuditMode();
+}
 function applyAllAudioSettings() {
     applyChannelRouting();
     applyGainSettings();
     applyFilterSettings();
+    applyProcessingAuditMode();
 
     const shouldPreserve = preservePitch.checked;
     mediaElement.preservesPitch = shouldPreserve;
@@ -833,6 +961,7 @@ function resetAllProcessing() {
     masterGain.value = "0";
     filterPreset.value = "bypass";
     preservePitch.checked = true;
+    processingAuditMode.value = "processed";
     setPreset("bypass");
     applyAllAudioSettings();
 }
@@ -1235,6 +1364,8 @@ function collectSettings() {
         masterGainDb: Number(masterGain.value),
         playbackRate: Number(playbackRate.value),
         preservePitch: preservePitch.checked,
+        processingAuditMode:
+            processingAuditMode?.value || "processed",
         filtersBypassed: bypassFilters.checked,
         preset: filterPreset.value,
         highpass: {
@@ -1290,6 +1421,7 @@ function buildAnalysisReport() {
             "Waveform-derived statistics and raw-mix browser WAV exports use the decoded analysis buffer at its reported sample rate.",
             "Filtering cannot restore discarded information.",
             "Extreme settings may emphasize codec or phase artifacts.",
+            "Processing residue is raw minus processed and includes attenuation, phase, timing and numerical differences; it is not isolated recovered speech.",
             "Transcription remains a human interpretation, not a measurement."
         ]
     };
@@ -1640,6 +1772,50 @@ compressorEnabled.addEventListener("change", async () => {
     });
 });
 
+processingAuditMode.addEventListener("change", async () => {
+    await ensureAudioGraph();
+    applyProcessingAuditMode();
+});
+
+auditOriginalStereoButton.addEventListener(
+    "click",
+    async () => {
+        await applyProcessingAuditShortcut(
+            "stereo",
+            "raw"
+        );
+    }
+);
+
+auditRawChannel2Button.addEventListener(
+    "click",
+    async () => {
+        await applyProcessingAuditShortcut(
+            "channel2",
+            "raw"
+        );
+    }
+);
+
+auditProcessedChannel2Button.addEventListener(
+    "click",
+    async () => {
+        await applyProcessingAuditShortcut(
+            "channel2",
+            "processed"
+        );
+    }
+);
+
+auditResidueChannel2Button.addEventListener(
+    "click",
+    async () => {
+        await applyProcessingAuditShortcut(
+            "channel2",
+            "residue"
+        );
+    }
+);
 resetProcessingButton.addEventListener("click", async () => {
     await ensureAudioGraph();
     resetAllProcessing();
@@ -6008,6 +6184,28 @@ window.__nolanAudioValidation = Object.freeze({
         return collectSettings();
     },
 
+    async setAuditMode(mode) {
+        if (
+            ![
+                "processed",
+                "raw",
+                "residue"
+            ].includes(mode)
+        ) {
+            throw new Error(
+                `Unsupported processing-audit mode: ${mode}`
+            );
+        }
+
+        processingAuditMode.value = mode;
+        await ensureAudioGraph();
+        applyProcessingAuditMode();
+        return collectSettings();
+    },
+
+    getAuditMode() {
+        return processingAuditMode.value;
+    },
     async playFrom(start = 0) {
         await ensureAudioGraph();
         selectionPlaybackActive = false;

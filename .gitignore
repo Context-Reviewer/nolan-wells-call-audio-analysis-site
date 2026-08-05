@@ -17,3 +17,5 @@ backup-before-audio-validation-phase-2-*
 backup-before-analysis-buffer-correction-*
 backup-before-phase-2-finalization-*
 validation.js.backup-before-cross-realm-hash-fix
+backup-before-processing-residue-phase-3-*
+backup-before-phase-3-finalization-*

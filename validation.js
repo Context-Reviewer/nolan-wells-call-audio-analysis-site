@@ -602,6 +602,33 @@ async function testGainAndPresets() {
             settings
         );
     }
+
+    // processing-residue-validation-v1
+    for (
+        const mode of [
+            "processed",
+            "raw",
+            "residue"
+        ]
+    ) {
+        const settings =
+            await hook.setAuditMode(mode);
+
+        expect(
+            `audit-mode-${mode}`,
+            `Processing-audit state: ${mode}`,
+            settings.processingAuditMode === mode &&
+            hook.getAuditMode() === mode,
+            {
+                requested: mode,
+                settingsMode:
+                    settings.processingAuditMode,
+                hookMode: hook.getAuditMode()
+            }
+        );
+    }
+
+    await hook.setAuditMode("processed");
 }
 
 async function testWavEncoder() {
@@ -748,6 +775,7 @@ async function runLiveTests() {
         );
         await hook.setPreset("bypass");
         await hook.setGains(0, 0, 0);
+        await hook.setAuditMode("processed");
 
         await hook.setChannelMode("stereo");
         await hook.playFrom(0.5);
@@ -983,6 +1011,71 @@ async function runLiveTests() {
             }
         );
 
+        await hook.setPreset("bypass");
+        await hook.setAuditMode("residue");
+        await sleep(180);
+
+        const bypassResidueRms =
+            hook.sampleOutputRms();
+
+        expect(
+            "live-residue-bypass-cancel",
+            "Processing residue approaches zero when filters are bypassed",
+            bypassResidueRms < 0.001,
+            {
+                outputRms: bypassResidueRms,
+                threshold: 0.001
+            }
+        );
+
+        await hook.setPreset("rumble");
+        await hook.setAuditMode("residue");
+
+        const rumbleResidue =
+            await readSpectrum(
+                [80, 500, 2200, 8000],
+                250
+            );
+
+        expect(
+            "live-residue-rumble",
+            "Rumble-filter residue is dominated by removed low frequency",
+            rumbleResidue["80"] >
+                rumbleResidue["2200"] + 12 &&
+            rumbleResidue["80"] >
+                rumbleResidue["8000"] + 12,
+            {
+                db80: rumbleResidue["80"],
+                db500: rumbleResidue["500"],
+                db2200: rumbleResidue["2200"],
+                db8000: rumbleResidue["8000"],
+                separation80To2200Db:
+                    rumbleResidue["80"] -
+                    rumbleResidue["2200"],
+                separation80To8000Db:
+                    rumbleResidue["80"] -
+                    rumbleResidue["8000"]
+            }
+        );
+
+        await hook.setAuditMode("raw");
+        const rawAudit =
+            await readSpectrum(
+                [80, 500, 2200, 8000],
+                180
+            );
+
+        expect(
+            "live-residue-raw-path",
+            "Raw audit path preserves the known multitone",
+            rawAudit["80"] > -45 &&
+            rawAudit["500"] > -45 &&
+            rawAudit["2200"] > -45 &&
+            rawAudit["8000"] > -45,
+            rawAudit
+        );
+
+        await hook.setAuditMode("processed");
         hook.stop();
 
         addResult(
@@ -1045,6 +1138,7 @@ async function runLoopTest() {
             "./assets/validation/known-stereo-routing.wav"
         );
         await hook.setPreset("bypass");
+        await hook.setAuditMode("processed");
         await hook.setChannelMode("channel2");
         await hook.setGains(0, 0, -18);
         hook.createSelection(0.20, 0.50);
